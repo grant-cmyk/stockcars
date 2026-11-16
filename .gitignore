@@ -1,0 +1,19 @@
+build/*.bin
+build/*.sym
+__pycache__/
+
+# agents' working copies (Claude Code worktrees): never part of the project
+.claude/worktrees/
+
+# a track other than 1 is built in a copy of src/ here (build.sh); its test pictures
+build/track*/
+build/track*_*.png
+
+# trial builds made in a copy of src/ (BDIR=... bash build.sh)
+build/road*/
+build/roadwhite*/
+
+# the 40-wide mini-map option builds in a copy of src/ here (MAPW40=1 bash build.sh); its screens for the sheet
+build/map40_t*
+build/zx0
+build/multi/

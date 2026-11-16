@@ -1,0 +1,488 @@
+"""Stage 3 headless test on the REAL 48K ROM (zx package).
+Checks your car, the two computer cars, bumping, the frame rate, and that the
+window matches the world map pixel for pixel (car areas excluded)."""
+import sys, os, re, math
+import numpy as np
+from PIL import Image
+from zx._spectrum import Spectrum
+import zx._spectrum as zs
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.join(HERE, '..')
+TAP = os.environ.get('ZTAP', os.path.join(ROOT, 'build', 'racer.tap'))
+SYMF = os.environ.get('ZSYM', os.path.join(ROOT, 'build', 'racer.sym'))
+OUT = os.path.join(ROOT, 'build')
+SYM = {}
+for line in open(SYMF):
+    p = line.split()
+    if len(p) >= 3 and p[1] == 'EQU':
+        SYM[p[0].lower()] = int(p[2].rstrip('H'), 16)
+WW = SYM['win_w'] * 8                                   # the window's width (184 since 14 Nov 2026)
+WY, WH, MR = SYM['win_y'], SYM['win_h'], SYM['msg_row']   # the window's top line and height, the message bar's row (build options)
+CS = SYM['c_size']; CARS = SYM['cars']; N = SYM['ncars']; CPUS = list(range(1, N)); TOWER_Y = SYM['tower_y']
+
+src = open(os.path.join(ROOT, 'src', 'world.asm')).read() + open(os.path.join(ROOT, 'src', 'waypoints.asm')).read() + open(os.path.join(ROOT, 'src', 'toprows.asm')).read() + open(os.path.join(ROOT, 'src', 'hirows.asm')).read()
+MAPW = int(re.search(r'MAPW\s+equ\s+(\d+)', src).group(1))
+MAPH = int(re.search(r'MAPH\s+equ\s+(\d+)', src).group(1))
+NWP = int(re.search(r'NWP\s+equ\s+(\d+)', src).group(1))
+CPU0X = int(re.search(r'CPU0X\s+equ\s+(\d+)', src).group(1))
+SY = int(re.search(r'TRACK_SY\s+equ\s+(\d+)', src).group(1))   # the bottom straight's middle
+sect = lambda a, b: src[src.index(a):src.index(b)]
+tiles = [[int(v, 16) for v in l.split('defb')[1].split(';')[0].split(',')]
+         for l in sect('tiles:', 'surface_map:').splitlines() if 'defb' in l]
+wmap = [0] * (MAPW * MAPH)                  # rebuilt from each row's list of tiles
+for l in src.splitlines():
+    m = re.match(r'row_(\d+):\s+defb\s+(.*)', l)
+    if m:
+        v = [int(x) for x in m.group(2).split(',')]
+        for i in range(1, len(v), 2):
+            wmap[int(m.group(1)) * MAPW + v[i]] = v[i + 1]
+surf = []
+for l in sect('surface_map:', 'waypoints').splitlines():
+    if 'defb' in l:
+        for b in l.split('defb')[1].split(','):
+            surf += [int(c) for c in b.strip().lstrip('%')]
+TM_FIRST = int(re.search(r'TM_FIRST\s+equ\s+(\d+)', src).group(1))
+top = open(os.path.join(ROOT, 'src', 'topdata.asm')).read()
+tsect = lambda a, b: [int(v, 0) for l in top[top.index(a):top.index(b)].splitlines() if 'defb' in l
+                      for v in l.split('defb')[1].split(';')[0].split(',')]
+midx = tsect('tmask_idx_src:', 'tmask_src:')
+mbytes = [int(v, 0) for l in top[top.index('tmask_src:'):].splitlines() if 'defb' in l for v in l.split('defb')[1].split(';')[0].split(',')]
+if 'BR_X0' in src: mbytes = [v for b in mbytes for v in (b, 0)]     # (a track with the bridge keeps a mask's even lines only: the others are empty)
+world = np.zeros((MAPH * 8, MAPW * 8), dtype=np.uint8)
+wmask = np.zeros((MAPH * 8, MAPW * 8), dtype=bool)    # breakfast things: cover the cloth
+for ty in range(MAPH):
+    for tx in range(MAPW):
+        n = wmap[ty * MAPW + tx]
+        t = tiles[n]
+        m = mbytes[midx[n - TM_FIRST] * 8:midx[n - TM_FIRST] * 8 + 8] if n >= TM_FIRST else [0] * 8
+        for j in range(8):
+            for i in range(8):
+                world[ty * 8 + j, tx * 8 + i] = (t[j] >> (7 - i)) & 1
+                wmask[ty * 8 + j, tx * 8 + i] = (m[j] >> (7 - i)) & 1
+_br = {k: int(v) for k, v in re.findall(r'BR_(X0|X1|Y0|Y3)\s+equ\s+(\d+)', src)}
+if _br:                                     # a track with the bridge (track 5): its two kerb walls are not map tiles - the game draws them
+    for _xa in (_br['X0'] - 8, _br['X1']):  # itself (kerb_draw, bridge.asm): 8 x 8 blocks, blue and cyan in turn, the cyan ones a blue line
+        for _y in range(_br['Y0'], _br['Y3']):   # each side with clean paper between
+            if ((_y - _br['Y0']) // 8) % 2 == 0: world[_y, _xa:_xa + 8] = 1
+            else: world[_y, _xa] = world[_y, _xa + 7] = 1
+        wmask[_br['Y0']:_br['Y3'], _xa:_xa + 8] = True
+
+def screen_bits(sp):
+    scr = sp.read(0x4000, 6144)
+    out = np.zeros((192, 256), dtype=np.uint8)
+    for y in range(192):
+        a = ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2)
+        row = np.unpackbits(np.frombuffer(bytes(scr[a:a + 32]), dtype=np.uint8))
+        out[y] = row
+    return out
+
+def press(sp, k, down): sp.devices.notify(zs.KeyStroke(zs.KEYS[k].ID, pressed=down))
+def hold(sp, keys, secs):
+    for k in keys: press(sp, k, True)
+    sp.run(duration=secs, fast_forward=True)
+    for k in keys: press(sp, k, False)
+
+s16 = lambda v: v - 65536 if v > 32767 else v
+def car(sp, n):
+    b = CARS + n * CS
+    return dict(x=sp.read16(b + 1), y=sp.read16(b + 4), vx=s16(sp.read16(b + 6)) / 256,
+                vy=s16(sp.read16(b + 8)) / 256, ang=sp.read8(b + 10), wp=sp.read8(b + 13))
+def put(sp, n, x, y, ang=None):
+    b = CARS + n * CS
+    sp.write(b + 1, bytes([x & 255, x >> 8])); sp.write(b + 4, bytes([y & 255, y >> 8]))
+    sp.write(b + 6, bytes(4))
+    if ang is not None: sp.write(b + 10, bytes([ang]))
+def g(sp, name): return sp.read16(SYM[name])
+CHOOSE = 'ch_np' in SYM                                 # the tape with the choose screen (tools/build_choose.sh)
+def through_choose(sp):
+    """On the tape with the choose screen, 1 at the title goes to that screen: accelerate through its four steps
+    (track, driver, car, extra as they stand) to the race. Any other tape: nothing. Call it straight after the 1."""
+    if not CHOOSE: return
+    sp.run(duration=0.3, fast_forward=True)
+    for i in range(4):
+        press(sp, 'Q', True); sp.run(duration=0.15, fast_forward=True); press(sp, 'Q', False)
+        if i < 3: sp.run(duration=0.3, fast_forward=True)
+def go_green(sp, limit=4.0):
+    # Q starts the start lights; the race starts on green (Grant, 10 Nov 2026). Hold Q
+    # until then; the seconds it took
+    press(sp, 'Q', True); t = 0.0
+    while sp.read8(SYM['race_on']) == 0 and t < limit:
+        sp.run(duration=0.02, fast_forward=True); t += 0.02
+    return t
+
+def shot(sp, name):
+    sp.render_screen()
+    px = np.array(sp.get_frame_pixels(), dtype=np.uint8).reshape(-1, 352, 4)[:, :, [2, 1, 0]]
+    Image.fromarray(px).resize((704, px.shape[0] * 2), Image.NEAREST).save(os.path.join(OUT, name))
+
+fails = 0
+def check(ok, msg):
+    global fails
+    print(('PASS ' if ok else 'FAIL ') + msg); fails += not ok
+
+def screen_text(sp, row, col, n):
+    font = sp.read(0x3D00, 96 * 8)
+    out = ''
+    for c in range(col, col + n):
+        a = 0x4000 | ((row & 0x18) << 8) | ((row & 7) << 5) | c
+        cell = bytes(sp.read8(a + 256 * k) for k in range(8))
+        ch = '?'
+        for code in range(96):
+            if bytes(font[code * 8:code * 8 + 8]) == cell: ch = chr(32 + code); break
+        out += ch
+    return out
+
+def frame_ok(sp):
+    # the slim frame (layout G3): a 2-pixel line, rounded, 3 pixels of table inside it
+    bits = screen_bits(sp); B = WY + WH + 3; R = 8 + WW + 4   # (R: the right-hand line's second pixel)                # (its bottom line: 3 pixels under the window)
+    lines = bits[3, 5:R - 1].all() and bits[4, 4:R].all() and bits[B, 4:R].all() and bits[B + 1, 5:R - 1].all()
+    sides = bits[5:B, 3:5].all() and bits[5:B, R - 1:R + 1].all()
+    gap = not bits[5:8, 5:R - 1].any() and not bits[B - 3:B, 5:R - 1].any() and not bits[8:B - 3, 5:8].any() and not bits[8:B - 3, R - 4:R - 1].any()
+    outside = not bits[0:3, 0:R + 4].any() and not bits[3, 0:5].any() and not bits[B + 2:B + 4, 0:88].any() and not bits[5:B, 0:3].any()
+    attrs = all(sp.read8(0x5800 + c) == 0x31 for c in range(24)) and sp.read8(0x5800 + (B // 8) * 32) == 0x31
+    return bool(lines and sides and gap and outside and attrs)
+
+class Racer(Spectrum):
+    armed = False                           # stop at copy_done only when asked
+    def on_breakpoint(self):                # (the emulator calls this at its own
+        if self.armed and self.pc == SYM['copy_done']:   # marks too: check where)
+            self.armed = False
+            raise zs.EmulatorException('at copy_done')
+    def load_tape(self, filename):          # the title screen comes up first (src/title.asm):
+        super().load_tape(filename)         # wait for its flashing PRESS 1 OR 2 TO START, press
+        t = 0                               # 1 (1UP) - and every test begins on the race screen
+        while self.read8(0x5800 + 8 * 32 + 10) != 0x7A and t < 60:   # (TODAY'S MENU, red on the card)
+            self.run(duration=0.1, fast_forward=True); t += 0.1
+        self.run(duration=0.5, fast_forward=True)                    # (the rest of the title is drawn after its prompt)
+        self.write(SYM['jin_on'], bytes([0xFF]))                     # (the start jingle and its automatic countdown held off: Q starts
+                                                                     # the lights, as these tests expect - tests/finish_test.py has the jingle)
+        if 'ch_np' in SYM:                                           # (the tape with the CHOOSE SCREEN, tools/build_choose.sh: 1, then the
+            press(self, '1', True); self.run(duration=0.2, fast_forward=True); press(self, '1', False)   # track - TSEL steps right - and
+            self.run(duration=0.3, fast_forward=True)                # accelerate four times: track, driver, car, extra as they stand.
+                                                                     # CSEL: other keys to press on the way, e.g. "Q,P,Q,Q,P,Q")
+            for k in (os.environ['CSEL'].split(',') if os.environ.get('CSEL') else ['P'] * int(os.environ.get('TSEL', '0')) + ['Q'] * 4):
+                press(self, k, True); self.run(duration=0.15, fast_forward=True); press(self, k, False); self.run(duration=0.3, fast_forward=True)
+            return
+        for _ in range(int(os.environ.get('TSEL', '0'))):               # (a tape with several tracks, tools/make_multi.py: T at the title is the next track)
+            press(self, 'T', True); self.run(duration=0.3, fast_forward=True); press(self, 'T', False); self.run(duration=0.5, fast_forward=True)
+        press(self, '1', True); self.run(duration=0.2, fast_forward=True); press(self, '1', False)
+        self.run(duration=0.26, fast_forward=True)                   # (the race screen is drawn; from here the computer cars'
+                                                                     # 90 s below run just as they did before there was a title:
+                                                                     # the same laps. One check there turns on when the race starts)
+
+def at_copy_done(sp):
+    # stop at the exact moment the copy has finished: the screen, the camera
+    # and the car positions then all belong to the same picture
+    sp.set_breakpoint(SYM['copy_done'])     # (set after loading: a reset clears it)
+    sp.armed = True
+    for _ in range(50):
+        try:
+            sp.run(duration=0.02, fast_forward=True)
+        except zs.EmulatorException:
+            break
+    assert sp.pc == SYM['copy_done'], 'did not stop at copy_done (pc %04X)' % sp.pc
+
+def cloth(camx, camy):
+    # the tablecloth: 32-px checks, the dark ones 25% dots, locked to the table
+    y, x = np.mgrid[camy:camy + WH, camx:camx + WW]
+    return ((((x >> 5) + (y >> 5)) & 1) == 1) & ((y & 1) == 0) & ((x & 3) == (y & 2))   # dark checks: 1 in 8, staggered
+
+# ---- the layout of 15 Nov 2026 (Grant: "have the track map on the bottom left inside of play. Move the damage
+# to the right"; then "c (2)4 is good, and the inside parts could be blue - so no masking inside required"): the
+# mini-map is 24 pixels wide, a solid ribbon of the window's own ink ORed over the picture in its bottom left
+# corner (its last line 3 above the window's foot); the spoons are screen columns 19-21 and the mug 22-24 of rows
+# 18-19; and the corner arrow flashes at a fixed spot.
+_mm = open(os.environ.get('ZMAP') or os.path.join(ROOT, 'src', 'minimap.asm')).read()   # (ZMAP: another build's minimap.asm, as ZTAP and ZSYM)
+MM_SC = int(re.search(r'\* (\d+) / 256', _mm).group(1)); MM_X0 = int(re.search(r'MMX0\s+equ\s+(-?\d+)', _mm).group(1)); MM_Y0 = int(re.search(r'MMY0\s+equ\s+(-?\d+)', _mm).group(1))
+MM_ROWS = np.array([[int(c) for b in l.split('defb')[1].split(',') for c in b.strip().lstrip('%')] for l in _mm.splitlines() if 'defb' in l], dtype=np.uint8)
+MM_H = MM_ROWS.shape[0]; MM_TOP = WH - 3 - MM_H           # its lines, and its first line in the window (x: 0-23)
+MM_W = 40 if SYM.get('opt_map40') else 24                # (a MAPW40=1 build: 40 wide, 5 bytes a line, at 19/256)
+assert MM_ROWS.shape[1] == MM_W and MM_SC == (19 if MM_W == 40 else 11), 'the mini-map file is not this build\'s'
+def map_dots(sp):
+    """where the game puts each car's dot on the map: (x, y), its top-left"""
+    out = []
+    for n in range(N):
+        c = car(sp, n)
+        out.append((min((c['x'] + 8 - MM_X0) * MM_SC // 256, MM_W - 2), min((c['y'] + 8 - MM_Y0) * MM_SC // 256, MM_H - 2)))
+    return out
+def map_now(sp):
+    """the map's ink as the game holds it now (MAPDAT: 3 bytes a line - 5 in a MAPW40 build - the dots XORed in)"""
+    return np.unpackbits(np.frombuffer(bytes(sp.read(SYM['mapdat'], MM_W // 8 * MM_H)), dtype=np.uint8)).reshape(MM_H, MM_W)
+def minimap_diff(sp):
+    """The map the game holds against the generated one with the dots the game says are in it (shown_dot: 2 x 2
+    yours, a pixel each the others, XORed - a hole on the ribbon, ink off it; a dot is up to four pictures behind
+    its car): (pixels that differ, the dots' places - None for one not shown - and the map's ink). That it is on
+    the screen, over the picture, is window_bad's to check."""
+    want = MM_ROWS.copy(); dots = []
+    for n in range(N):
+        x, y = sp.read8(SYM['shown_dot'] + 2 * n), sp.read8(SYM['shown_dot'] + 2 * n + 1)
+        if x == 0xFF: dots.append(None); continue
+        k = 2 if n == 0 else 1
+        want[y:y + k, x:x + k] ^= 1; dots.append((x, y))
+    return int((map_now(sp) != want).sum()), dots, int(MM_ROWS.sum())
+ARROW_KINDS = ['none', 'straight', 'gentle left', 'gentle right', 'sharp left', 'sharp right']
+def arrow_state(sp):
+    """The corner arrow in the picture now on the screen (call at copy_done): None if it is not drawn, else
+    (code, x, y): its table byte and its field's top-left in the window (AR_W x AR_H: 24 x 15) - always the same spot."""
+    if not (g(sp, 'renders') & 2) or sp.read8(SYM['race_on']) == 0 or sp.read8(SYM['you_done']): return None
+    code = sp.read8(SYM['arrow_tab'] + car(sp, 0)['wp'])
+    return (code, SYM['arrow_col'] * 8, SYM['arrow_top']) if code else None
+AR_W, AR_H = SYM['arrow_w'], SYM['arrow_rows']
+def window_bad(sp, stop=True):
+    if stop: at_copy_done(sp)               # (stop=False: the picture already stopped at, when the caller has looked at its state)
+    camx, camy = g(sp, 'camx'), g(sp, 'camy')
+    bits = screen_bits(sp)[WY:WY + WH, 8:8 + WW]     # the window
+    want = world[camy:camy + WH, camx:camx + WW] | (cloth(camx, camy) & ~wmask[camy:camy + WH, camx:camx + WW])
+    want = want.copy(); want[MM_TOP:MM_TOP + MM_H, 0:MM_W] |= map_now(sp)   # the mini-map: its ribbon solid, the picture showing everywhere else
+    mask = np.ones_like(want, dtype=bool)
+    mask[8 - WY:32 - WY, 56 - 8:136 - 8] = False     # the start lights (row 1's rail, rows 2-3's lamps)
+    mask[WH - 16:WH, WW - 48:WW] = False     # the spoons and the mug gauge, bottom right
+    ar = arrow_state(sp)
+    if ar: mask[max(ar[2], 0):max(ar[2] + AR_H, 0), max(ar[1], 0):max(ar[1] + AR_W, 0)] = False   # the corner arrow, while it is on
+    mask[2:20, WW - 40:WW] = False                       # your place on its plate, in the top right corner
+    mask[136 - WY:152 - WY, 56 - 8:136 - 8] = False       # the crew chief and his bubble, at the foot of the window (rows 17-18, columns 7-16)
+    for n in range(N):
+        c = car(sp, n)
+        cx, cy = c['x'] - camx, c['y'] - camy
+        # the big car's frame (the car turned at full size, and its 1px halo): 24 wide from
+        # position - 3, up to 29 rows from position - 6
+        mask[max(cy - 6, 0):max(cy + 23, 0), max(cx - 3, 0):max(cx + 21, 0)] = False
+    bad = int(((bits != want) & mask).sum())
+    if bad:                                 # save what differs, to look at
+        im = np.stack([want * 255, bits * 255, ((bits != want) & mask) * 255], axis=-1).astype(np.uint8)
+        Image.fromarray(255 - im).resize((576, 384), Image.NEAREST).save(os.path.join(OUT, 'window_diff.png'))
+        print('  cars (window x, y):', [(car(sp, n)['x'] - camx, car(sp, n)['y'] - camy) for n in range(N)], 'cam', camx, camy)
+    return bad
+
+with Racer(headless=True) as sp:
+    sp.load_tape(TAP)
+    t = 0                                   # the test loader is fast: start
+    while g(sp, 'renders') == 0 and t < 60: # watching the moment the game runs
+        sp.run(duration=0.1, fast_forward=True); t += 0.1
+    sp.run(duration=3.0, fast_forward=True)
+    p0 = car(sp, 0); cs0 = [car(sp, i) for i in CPUS]
+    print('you', p0); [print('CPU', i, c) for i, c in zip(CPUS, cs0)]
+    check(p0['vx'] == 0 and p0['ang'] == 16, 'your car waits on the start line')
+    check(frame_ok(sp), 'a slim blue frame with rounded corners surrounds the play window')
+    logo = [[c == '#' for c in l.strip()] for l in open(os.path.join(ROOT, 'build', 'logo.txt'))]
+    sb = screen_bits(sp)
+    hid = [sp.read8(0x5800 + r * 32 + c) for r in (22, 23) for c in range(16, 26)]
+    check((sb[168:184, 72:128] == np.array(logo)).all() and not sb[184:192, 0:128].any() and not sb[168:192, 0:72].any() and not sb[168:176, 128:256].any() and hid == [0x36] * 20,
+          'the BREAKFAST RUN logo is under the window, centred on it (columns 9-15, rows 21-22); nothing else to SEE down there (the crew\'s bubble is kept beside it in yellow on yellow)')
+    md, dots, mink = minimap_diff(sp)
+    check(md == 0 and mink > 60 and all(sp.read8(0x5800 + r * 32 + c) == 0x29 for r in range(15, 20) for c in range(1, 7)) and not sb[0:40, 208:256].any() and all(sp.read8(0x5800 + r * 32 + c) == 0x30 for r in range(0, 5) for c in range(26, 32))
+          and sp.read8(0x5800 + 5 * 32 + 26) == 0x4F and sp.read8(0x5800 + 17 * 32 + 26) == 0x4F and sb[137:142, 208:256].any(),
+          'the mini-map is INSIDE the window, bottom left, in the window\'s own colours (the track line for line: %d pixels of ribbon, %d wrong); the panel\'s top right is plain; RACE and the five cars (rows 5-15); YOUR RACE under them (row 17)' % (mink, md))
+    msg = screen_text(sp, 22, 1, 8) + '/' + screen_text(sp, 23, 1, 8)
+    check(MR != 1 or screen_text(sp, 0, 1, 22) == "BREAKFAST AT TIFFANY'S", 'the track is named along the top: %r' % screen_text(sp, 0, 1, 22))
+    attr = lambda r, c: sp.read8(0x5800 + 32 * r + c)
+    print('message bar %r' % msg)
+    check(msg.strip(' /') == '', 'under the window, bottom left: nothing any more - no scoreboard (%r)' % msg)
+    sb = screen_bits(sp)                            # the driver strip under the window
+    check(all(attr(r, c) in (0x30, 0x36) for r in (21, 22, 23) for c in list(range(0, 9)) + list(range(16, 26))),
+          'under the window: plain table either side of the logo - no crew chief (Grant, 14 Nov 2026: "do away with the pitstop talk for now")')
+    check(sb[WY + WH - 12:WY + WH - 2, 168:176].any() and attr(19, 21) == 0x2A and attr(18, 21) == 0x2A and attr(19, 20) == 0x29 and attr(19, WW // 8) == 0x2B and attr(18, 22) == 0x2B,
+          'your NOS spoon is shown in red beside the health mug (screen column 21), the mug in the window\'s right corner in magenta (columns 22-24; their colour cells their own)')
+    check(all(attr(TOWER_Y + 2 * i, 26) == [0x57, 0x68, 0x78, 0x58, 0x60][i] for i in range(5)), 'the whole race order is drawn at the start in grid order (YOU, CYAN, WHITE, PINK, GREEN), each car on its colour')
+    place = lambda: next(i + 1 for i in range(5) if attr(TOWER_Y + 2 * i, 26) == 0x57)
+    check(place() == 1 and sp.read8(SYM['position']) == 1, 'on the grid you are shown 1st (your row is red)')
+    check(len(CPUS) == 4, 'there are four computer cars')
+    check(all(c['vx'] == 0 and c['vy'] == 0 for c in cs0), 'computer cars wait on the grid until you press Q')
+    bad = window_bad(sp)
+    check(bad == 0, 'window matches the world map pixel for pixel, cars excluded (%d wrong)' % bad)
+    shot(sp, 'stage3_start.png')
+
+    # ---- the start lights: Q, then red, red, red, all green - nobody moves till green ----
+    lamps = lambda: [attr(2, c) for c in (8, 11, 14)]
+    check(lamps() == [0x47] * 3 and attr(1, 7) == 0x28 and attr(3, 15) == 0x47 and screen_bits(sp)[10:13, 60:132].all(),
+          'before Q: three start lights hang from a rail in the window, not lit - white rings (%s)' % lamps())
+    press(sp, 'Q', True); sp.run(duration=0.3, fast_forward=True)
+    l1 = lamps(); x1 = [car(sp, n)['x'] for n in range(N)]
+    sp.run(duration=0.8, fast_forward=True); l2 = lamps()
+    sp.run(duration=0.8, fast_forward=True); l3 = lamps()
+    x3 = [car(sp, n)['x'] for n in range(N)]; print('  x on red', x1, x3)
+    still = x3 == x1 and sp.read8(SYM['race_on']) == 0
+    print('start lights after Q:', l1, l2, l3)
+    check(l1 == [0x42, 0x47, 0x47] and l2 == [0x42, 0x42, 0x47] and l3 == [0x42] * 3, 'Q: the lights come on one at a time - red, red, red')
+    check(still, 'holding Q on red: nobody moves')
+    tg = go_green(sp)
+    check(sp.read8(SYM['race_on']) == 1 and lamps() == [0x44] * 3, 'then all three green: the race is on (%.1f s after Q)' % (1.9 + tg))
+    check(sp.read8(SYM['snd_port']) & 7 == 4 and sp.read8(SYM['flash_t']) > 0, 'at GO the border flashes green (port value %d, %d frames left)' % (sp.read8(SYM['snd_port']), sp.read8(SYM['flash_t'])))
+
+    # ---- you: accelerate, camera follows, top speed unchanged ----
+    r0 = g(sp, 'renders')
+    hold(sp, ['Q'], 2.0)
+    p1 = car(sp, 0)
+    fps = (g(sp, 'renders') - r0) / 2.0
+    print('you after 2s of Q', p1, ' pictures/s %.1f' % fps)
+    check(sp.read8(SYM['snd_port']) & 7 == 6 and sp.read8(SYM['flash_t']) == 0, 'and goes back to yellow')
+    check(all(p1['x'] > car(sp, i)['x'] for i in CPUS), 'from the grid you pull away from all four')
+    # (12.5 = every picture at 4 TV frames. Off the grid the game is in its 4-frame rhythm for
+    # these 2 seconds with or without the ditty: 26 pictures without it, 25 with - 14 Nov 2026)
+    check(fps >= 11.9, 'at least 11.9 pictures a second off the start, five cars bunched, the chief\'s GOOD LUCK up (got %.1f; 12.5 was asked before his bubble: it is copied into each picture while it is up)' % fps)
+    check(all(car(sp, i)['x'] > CPU0X + 20 for i in CPUS), 'pressing Q started the race: all four computer cars set off (x %s, from %d)' % ([car(sp, i)['x'] for i in CPUS], CPU0X))
+    sb = screen_bits(sp)
+    check((sb[168:184, 72:128] == np.array(logo)).all() and attr(23, 12) == 0x30 and attr(21, 16) == 0x30, 'at the green light nobody talks: the logo is still whole under the window')
+    check(attr(2, 8) == 0x29 and attr(1, 7) == 0x29 and sp.read8(SYM['lt_on']) == 0, 'the start lights have gone, their cells the window\'s colours again')
+    press(sp, 'Q', True); at_copy_done(sp); pc_ = car(sp, 0); press(sp, 'Q', False)
+    cx, cy = pc_['x'] - g(sp, 'camx'), pc_['y'] - g(sp, 'camy')
+    s8_ = lambda v: v - 256 if v > 127 else v; ldx, ldy = s8_(sp.read8(SYM['lead_x'])), s8_(sp.read8(SYM['lead_y']))
+    check(abs(cx - (WW // 2 - 8 - ldx)) <= 3 and abs(cy - (WH // 2 - 8 - ldy)) <= 3 and abs(ldx) <= 40 and abs(ldy) <= 32, 'the camera keeps your car in the middle of the %d x %d window less its lead ahead, which moves 3 pixels a picture (car at %d,%d; lead %d,%d; tests/lead_test.py has the rest)' % (WW, WH, cx, cy, ldx, ldy))
+
+    sp.run(duration=0.6, fast_forward=True)
+    bar = screen_text(sp, 22, 1, 9) + '|' + screen_text(sp, 23, 1, 9)
+    check(not screen_bits(sp)[168:192, 0:72].any() and attr(21, 4) == 0x30, 'racing: still nothing bottom left')
+
+    # ---- park your car in the infield and watch the computer race 90 s ----
+    put(sp, 0, 40, 40)                        # top-left corner, well off the track
+    sp.run(duration=0.5, fast_forward=True)
+    K = len(CPUS)
+    laps = [0] * K; last_wp = [sp.read8(CARS + n * CS + 25) for n in CPUS]
+    onroad = [0] * K; samples = 0; vmax = [0] * K; tracks = [[] for _ in CPUS]
+    lap_t = [[] for _ in CPUS]; vs = [[] for _ in CPUS]; t = 0.0; m0 = g(sp, 'mistakes'); r0 = g(sp, 'renders')
+    while t < 90:
+        sp.run(duration=0.1, fast_forward=True); t += 0.1; samples += 1
+        for i, n in enumerate(CPUS):
+            c = car(sp, n)
+            gl = sp.read8(CARS + n * CS + 25)   # the game's own lap count (C_LAPS):
+            if gl != last_wp[i]:                 # the waypoint can't be sampled - the
+                laps[i] += 1; lap_t[i].append(round(t, 1))   # AI moves it ahead
+            last_wp[i] = gl                      # for a moment to look ahead
+            tx, ty = (c['x'] + 8) // 8, (c['y'] + 8) // 8
+            if not (0 <= tx < MAPW and 0 <= ty < MAPH): print('  off the map:', n, c, 't', round(t, 1))
+            onroad[i] += 0 <= tx < MAPW and 0 <= ty < MAPH and surf[ty * MAPW + tx] == 0
+            vs[i].append(math.hypot(c['vx'], c['vy']))
+            vmax[i] = max(vmax[i], vs[i][-1])
+            tracks[i].append((c['x'], c['y']))
+    mistakes = g(sp, 'mistakes') - m0
+    print('laps', laps, 'top speeds', ' '.join('%.2f' % v for v in vmax),
+          'on road', ' '.join('%.0f%%' % (100 * o / samples) for o in onroad), 'mistakes', mistakes, 'bumps', g(sp, 'bumps'))
+    check(min(laps) >= 3, 'all four computer cars lap the track (%s laps in 90 s)' % laps)
+    fast = [sum(v > 1.80 for v in vv) / len(vv) for vv in vs]      # a bump's kick, or a slide, can add
+    check(max(fast) < 0.02, 'computer cars are not faster than your top speed (over 1.80: %s of the time)' % ' '.join('%.1f%%' % (100 * f) for f in fast))  # a moment
+    avg = [(lt[-1] - lt[0]) / (len(lt) - 1) for lt in lap_t]
+    print('average laps (s):', ' '.join('%.1f' % a for a in avg))
+    check(max(avg) - min(avg) > 1.0, 'the computer cars are not all the same speed (%s s a lap)' % ' '.join('%.1f' % a for a in avg))
+    LEN = NWP / 34                                  # the track's length against the first (34 waypoints)
+    check(13.0 * LEN < min(avg) < 15.0 * LEN, 'the fastest computer car is competitive: %.1f s a lap against your ~%.1f s' % (min(avg), 13.5 * LEN))
+    check(max(avg) < 17.5 * LEN, 'even the slowest computer car is within %.1f s a lap of you (%.1f s)' % (4 * LEN, max(avg)))
+    cl = [car(sp, i) for i in CPUS]
+    claps = [sp.read8(CARS + i * CS + 25) for i in CPUS]
+    print('computer cars past the line', claps, 'race time', g(sp, 'race_time'))
+    check(min(claps) >= 3, 'the computer cars\' laps are counted (%s)' % claps)
+    sb = screen_bits(sp)
+    bl = sp.read16(SYM['best_lap'])
+    print('best lap', bl, 'frames')
+    band = sb[(TOWER_Y + 10) * 8:(TOWER_Y + 10) * 8 + 8, 208:256]
+    xs = np.nonzero(band.any(axis=0))[0] + 208
+    print('lap record panel ink x', xs.min() if len(xs) else None, xs.max() if len(xs) else None)
+    check(bl < 0xFFFF and sp.read16(SYM['rec_lap']) == bl and len(xs) and abs((xs.min() + xs.max()) / 2 - 231.5) <= 4,
+          'the best lap is the lap record, shown with its clock, under the race order (x %s-%s)' % (xs.min() if len(xs) else '-', xs.max() if len(xs) else '-'))
+    talking = sp.read8(SYM['msg_st'])               # (a message may still be up: let it end -
+    for _ in range(40):                                  # the longer track moved the moment it is
+        if sp.read8(SYM['msg_st']) == 0: break       # checked into one)
+        sp.run(duration=0.1, fast_forward=True)
+    sb2 = screen_bits(sp)
+    if False:   # (to see what is there)
+        ys, xs2 = np.nonzero(sb2[168:192, 88:168]); print('  strip ink rows', sorted(set(ys + 168))[:12], 'x', sorted(set(xs2 + 88))[:12], 'attr(21,12) %02X' % attr(21, 12))
+        shot(sp, 'bubble_debug.png')
+    check((sb2[168:184, 72:128] == np.array(logo)).all() and attr(23, 12) == 0x30, 'no speech bubble, the logo whole (radio state when first looked: %d)' % talking)
+    check(place() == 5 and sp.read8(SYM['position']) == 5, 'parked while four cars race: your red row is 5th in the tower')
+    # the four computer cars are in by now: the race order shows no faces while racing - a mini
+    # chequered flag in column 31 for each car that is in, and the gaps to the leader in a small font
+    def cellrows(row, col):
+        return [sp.read8(0x4000 | ((row & 0x18) << 8) | ((row & 7) << 5) | col | (k << 8)) for k in range(8)]
+    flagwant = [0, 0, 0, 0, 0x66, 0x66, 0x18, 0x18, 0x66, 0x66, 0, 0, 0, 0, 0, 0]
+    both = flagwant[3:11] + [sp.read8(SYM['clock8'] + k) for k in range(8)]   # in with the best lap: the flag above the small clock
+    cols31 = [cellrows(TOWER_Y + 2 * i, 31) + cellrows(TOWER_Y + 1 + 2 * i, 31) for i in range(4)]
+    ok_flags = all(c in (flagwant, both) for c in cols31) and cols31.count(both) <= 1
+    gap_ink = [sum(bin(b).count('1') for c in (29, 30) for b in cellrows(TOWER_Y + 2 * i, c) + cellrows(TOWER_Y + 1 + 2 * i, c)) for i in range(5)]
+    check(ok_flags, 'finished cars: a mini chequered flag in column 31 - and the best lap\'s clock under it in the same column (%d of 4 rows have both)' % cols31.count(both))
+    check(gap_ink[0] == 0 and all(g > 0 for g in gap_ink[1:4]), 'the race order shows gaps to the leader (ink per place %s: none for the leader)' % gap_ink)
+    check(g(sp, 'race_time') > 50 * 85, 'the race clock is running (%.1f s)' % (g(sp, 'race_time') / 50))
+    check(min(o / samples for o in onroad) > 0.8, 'computer cars stay mostly on the road')
+    check(mistakes >= 6, 'computer cars make mistakes (%d in 90 s)' % mistakes)
+    d = [math.dist(a, b) for a, b in zip(tracks[0], tracks[1])]
+    check(max(d) > 40, 'the computer cars drive differently (they spread out)')
+
+    # ---- your top speed on a clear road (computer cars sent far away) ----
+    at_copy_done(sp)                               # (16 Nov 2026: a place written while the game is part-way through moving that car is LOST - the game writes its old one back: the 'latent fault'. Write between pictures - tests/put_race_probe.py)
+    for i in CPUS: put(sp, i, 4 + 40 * i, SY + 58)   # (parked apart: they bump nothing)
+    put(sp, 0, 180, SY - 8, 16)
+    hold(sp, ['Q'], 1.5)
+    pv = car(sp, 0)
+    check(1.6 < math.hypot(pv['vx'], pv['vy']) <= 1.8, 'your top speed on a clear road is 1.75 px/frame (%.2f)' % math.hypot(pv['vx'], pv['vy']))
+
+    # ---- bump: drop a computer car just in front of you, drive into it ----
+    at_copy_done(sp)
+    put(sp, 0, 200, SY - 8, 16); put(sp, 1, 230, SY - 8, 16)
+    sp.write(CARS + CS + 16, bytes([60, 2]))      # CPU A: 60 frames of 'lift' so it sits still-ish
+    b0n = g(sp, 'bumps')
+    red = False                                   # (the crash: the border red, a fifth of a second)
+    press(sp, 'Q', True)
+    for _ in range(50):
+        sp.run(duration=0.02, fast_forward=True); red = red or sp.read8(SYM['snd_port']) & 7 == 2
+    press(sp, 'Q', False)
+    check(red, 'ramming a car flashes the border red')
+    p2, a2 = car(sp, 0), car(sp, 1)
+    print('after ramming', p2, a2, 'bumps', g(sp, 'bumps') - b0n)
+    check(g(sp, 'bumps') > b0n, 'driving into a computer car bumps it')
+    check(abs(p2['x'] - a2['x']) >= 10 or abs(p2['y'] - a2['y']) >= 10, 'bumped cars do not end up inside each other')
+    # head-on: you and a computer car coast at each other (no keys, so nothing
+    # pushes back after the bump); just after they touch, each moves away
+    for i in CPUS: put(sp, i, 4 + 40 * i, SY + 58)   # (parked apart: they bump nothing)
+    at_copy_done(sp)                               # (write the cars' places between pictures, not while
+                                                   # the game is half-way through moving them)
+    put(sp, 0, 200, SY - 8, 16); put(sp, 1, 222, SY - 8, 48)   # 22 apart: they meet in a few frames
+    sp.write(CARS + 6, bytes([0x80, 0x01]))        # you rolling right at 1.5 px/frame
+    sp.write(CARS + CS + 6, bytes([0x80, 0xFE]))   # CPU A rolling left at 1.5 px/frame
+    sp.write(CARS + CS + 16, bytes([40, 2]))       # ...and lifting (no throttle)
+    b1 = g(sp, 'bumps'); seen = None
+    for _ in range(40):
+        sp.run(duration=0.02, fast_forward=True)
+        if g(sp, 'bumps') > b1:
+            at_copy_done(sp)                       # (16 Nov 2026: read between pictures - a stop inside bump itself sees the count up and the kick not yet given)
+            seen = (car(sp, 0), car(sp, 1)); break
+    print('just after the head-on bump', seen)
+    check(seen is not None and seen[0]['vx'] < 0 < seen[1]['vx'],
+          'cars that hit head-on bounce away from each other')
+
+    # ---- finish: on your last lap, cross the line ----
+    for i in CPUS: put(sp, i, 4 + 40 * i, SY + 58)   # (parked apart: they bump nothing)
+    sp.write(CARS + 25, bytes([3]))                # past the line 3 times: on lap 3
+    sp.write(CARS + 13, bytes([SYM['ws']]))        # heading for the first waypoint after it
+    put(sp, 0, 250, SY - 8, 16)
+    hold(sp, ['Q'], 1.5)
+    sp.run(duration=0.3, fast_forward=True)
+    card = [sp.read8(0x5800 + r * 32 + c) for r, c in ((5, 5), (6, 5), (18, 20), (17, 20))]
+    print('after crossing the line on lap 3: the card\'s colours', ['%02X' % v for v in card], 'race_over', sp.read8(SYM['race_over']))
+    check(sp.read8(SYM['race_over']) != 0, 'crossing the line on the last lap: the race is over')
+    check(card == [0x4F, 0x70, 0x4F, 0x70], 'every car in: the podium\'s yellow card in the window, its head and foot blue (tests/finish_test.py has the rest)')
+    r1 = g(sp, 'renders'); t1 = g(sp, 'race_time')
+    sp.run(duration=0.5, fast_forward=True)
+    check(g(sp, 'renders') == r1 and g(sp, 'race_time') == t1, 'the race over: everything stops (no pictures, the clock still)')
+    hold(sp, ['Q'], 0.3)                           # let go, then press: the title screen (src/title.asm) ...
+    sp.run(duration=1.0, fast_forward=True)
+    check(sp.read8(0x5800 + 8 * 32 + 10) == 0x7A and screen_text(sp, 8, 10, 12) == "TODAY'S MENU"
+          and sp.read8(SYM['snd_rate']) == 0, 'Q after the finish: back to the title screen, the engine quiet')
+    hold(sp, ['1'], 0.2)                           # ... and 1 (1UP): a new race
+    through_choose(sp)
+    sp.run(duration=1.5, fast_forward=True)
+    p5 = car(sp, 0)
+    check(sp.read8(SYM['race_over']) == 0 and sp.read8(SYM['race_on']) == 0
+          and (p5['x'], p5['y']) == (car(sp, 0)['x'], car(sp, 0)['y']) and frame_ok(sp),
+          '1 at the title starts a new race on the grid, the race screen whole again (its frame back)')
+    sb = screen_bits(sp)
+    check(sp.read16(SYM['rec_lap']) == bl and sp.read16(SYM['best_lap']) == 0xFFFF
+          and sb[(TOWER_Y + 10) * 8:(TOWER_Y + 10) * 8 + 8, 224:248].any(),
+          'the lap record stays for the new race (a hi-score), shown from the start; the race best starts again')
+    hold(sp, ['Q'], 0.2)
+
+    # ---- the picture: pixel check with cars masked out, after a stop ----
+    sp.run(duration=3.0, fast_forward=True)
+    bad = window_bad(sp)
+    check(bad == 0, 'window matches the world map pixel for pixel, cars excluded (%d wrong)' % bad)
+    shot(sp, 'stage3_bump.png')
+
+print('RESULT:', 'PASS' if fails == 0 else '%d FAIL' % fails)
+sys.exit(1 if fails else 0)
