@@ -73,3 +73,10 @@
 - Mock-up of 16, 24 and 32 pixel trucks on the 88 px road: docs/design/mockups/truck_sizes.png
   (tools/mockups/make_size_mock.py, SC=1, 1.5, 2); added to the page docs/design/mockups/first_look.html.
   Claude recommends 24. Waiting for Grant to choose.
+
+## 16 Nov 2026 22:51 SAST - truck size decided: 24 x 24 (cloud session, Claude)
+- Grant: "24 is fine".
+- Sum, not a measurement: a 24 x 24 frame with its mask is 144 bytes; 16 headings is 2,304 bytes a truck. Five
+  different trucks would be 11,520 bytes (the small cars take 4,864 today) - too much. Proposal put to Grant: ONE
+  truck body shared by all (colour is free: it is the square's colour, not the drawing), with each weapon a small
+  separate drawing on the nose. Then the whole set is about 2,304 bytes plus the weapons, less with flipped frames.
