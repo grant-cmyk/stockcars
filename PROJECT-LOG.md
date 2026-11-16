@@ -110,3 +110,17 @@
   draws them from the frames, and 24 x 24 does not fit its 16 x 16 boxes). (3) Every truck has the hammer; nothing
   works as a weapon yet. (4) Trucks that touch share colour squares (one takes the other's colour).
 - Version: 0.4.0 (minor: the trucks).
+
+## 16 Nov 2026 23:02 SAST - smaller trucks with solid wheels, trial 4 (cloud session, Claude)
+- Grant on trial 3: "the trucks can be smaller - skid is good although graphics are messed up". The skid (SKID=1) stays.
+- tools/truck_art.txt v2: a 20 x 20 truck in the middle of the 24 x 24 drawing; solid wheels and a solid cab, so the
+  computer-turned slanted headings stay readable (trial 3's treaded wheels turned to lumps). Claude took "messed up"
+  to mean those lumps - not confirmed by Grant. The editor (docs/tools/truck_editor.html) carries the v2 art.
+- Trial tape: build/stockcars_oval_trial4.tap
+  (TRUCKS=1 RACETRACK=1 TRACK=6 SKID=1 BDIR=oval_rt_trucks OUT=stockcars_oval_trial4 bash build.sh big).
+  Pictures: docs/design/trials/oval_trial4.gif, oval_trial4_grid.png, oval_trial4_bend30.png, oval_trial4_bend45.png.
+- MEASURED: 1,416 bytes of truck pictures. VERIFIED (tests/rt_laps.py): all five lap, about 15.5 s; 370 pictures in
+  60 s = 6.2 a second.
+- STILL WRONG: the race order panel has no truck pictures; trucks that overlap share colour squares; every truck
+  has the hammer and no weapon works; the panel, mug and logo are Breakfast Run's.
+- Version: 0.4.1 (patch: the truck redrawn).

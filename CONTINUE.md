@@ -1,6 +1,6 @@
 # CONTINUE - Stock Cars (working title)
 
-Stamped: 16 Nov 2026 22:59 SAST. Machine: Claude cloud container (no local machine). Commit: the one that adds this file (see git log -1).
+Stamped: 16 Nov 2026 23:02 SAST. Machine: Claude cloud container (no local machine). Commit: the one that adds this file (see git log -1).
 Repository: GitHub grant-cmyk/stockcars (private), branch main. Identity: Personal. Classification: Internal.
 
 ## What this is
@@ -25,12 +25,12 @@ Weapon trucks racing on a scrolling oval, ZX Spectrum 48K, built on a copy of th
 Read docs/reference/OPTIMISATION-PLAN.md before adding anything: Breakfast Run ended with about 23 bytes free.
 
 ## Latest tape
-build/stockcars_oval_trial3.tap: the oval, black road, 24 x 24 hammer trucks, loose grip
-(TRUCKS=1 RACETRACK=1 TRACK=6 SKID=1 BDIR=oval_rt_trucks OUT=stockcars_oval_trial3 bash build.sh big).
+build/stockcars_oval_trial4.tap: the oval, black road, 20 x 20 hammer trucks (v2 art, solid wheels), loose grip
+(TRUCKS=1 RACETRACK=1 TRACK=6 SKID=1 BDIR=oval_rt_trucks OUT=stockcars_oval_trial4 bash build.sh big).
 Known faults and what is next: the last entry of PROJECT-LOG.md.
 
 ## Waiting on Grant
-- Drive trial 3: truck size, look, skid.
+- Drive trial 4: truck size and look. (Skid: "good" on trial 3 - keep SKID=1.)
 - Truck art: 24 x 24, ONE shared body + weapon drawings (agreed). Grant to redraw Claude's drafts in the editor
   (https://claude.ai/artifact/CjLeN5LA5Ky7xm1JuS72nt) and paste the text back -> tools/truck_art.txt.
 - Drive build/stockcars_oval_trial2.tap (black road, green grass; RACETRACK=1 TRACK=6 SKID=1 BDIR=oval_rt

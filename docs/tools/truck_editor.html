@@ -29,7 +29,7 @@ textarea{width:100%;min-height:150px;box-sizing:border-box;background:var(--cell
 <main>
 <header style="display:flex;flex-direction:column;gap:8px">
 <span class="tag">ZX Spectrum 48K &middot; Stock Cars &middot; Personal &middot; Internal</span>
-<h1>Truck editor, 24 &times; 24</h1>
+<h1>Truck editor</h1>
 <p>One truck body is shared by every truck. Each weapon is drawn on top of it. Pick a part, draw, then press <b>Copy the art</b> and paste it back to Claude.</p>
 </header>
 <div class="cols">
@@ -61,14 +61,14 @@ textarea{width:100%;min-height:150px;box-sizing:border-box;background:var(--cell
 </div>
 </main>
 <script>
-const START = {"BODY":["........................","........................","........................","........................","........................","........................","........XXXXXXXX........",".XXXXX.XXXXXXXXXX.XXXXX.",".X.X.XXXooooooooXXX.X.X.",".XXXXXXXooooooooXXXXXXX.",".X.X.X.XXXXXXXXXX.X.X.X.",".XXXXX.XooooooooX.XXXXX.",".X.X.X.XoXXXXXXoX.X.X.X.",".XXXXX.XoXooooXoX.XXXXX.",".......XoXooooXoX.......",".......XoXXXXXXoX.......",".XXXXX.XooooooooX.XXXXX.",".X.X.X.XXXXXXXXXX.X.X.X.",".XXXXXXXooooooooXXXXXXX.",".X.X.XXXooooooooXXX.X.X.",".XXXXX.XXXXXXXXXX.XXXXX.",".X.X.X..XXXXXXXX..X.X.X.",".XXXXX............XXXXX.","........................"],"SPIKE":["...........XX...........","...........XX...........","..........XXXX..........","..........XXXX..........",".........XXXXXX.........",".........XXXXXX........."],"HAMMER":["....XXXXXXXXXXXXXXXX....","....XooooooooooooooX....","....XXXXXXXXXXXXXXXX....","..........XXXX..........","..........XXXX..........","..........XXXX.........."],"TIPPER":["..XXXXXXXXXXXXXXXXXXXX..","...XooooooooooooooooX...","....XooooooooooooooX....",".....XXXXXXXXXXXXXX.....",".......XX......XX.......",".......XX......XX......."],"SAW":[".......X.X.XX.X.X.......","......XXXXXXXXXXXX......",".....XXXXooooooXXXX.....","......XXXooooooXXX......",".....XXXXXXXXXXXXXX.....",".......X.X.XX.X.X......."],"GUN":["...........XX...........","...........XX...........","...........XX...........","..........XXXX..........",".........XXXXXX.........",".........XooooX........."],"OIL":["........................",".........XXXXXX.........","........XooooooX........","........XoXXXXoX........","........XooooooX........",".........XXXXXX........."]};                      // {BODY:[24 strings], SPIKE:[...], ...}
+const START = {"BODY":["........................","........................","........................","........................","........................","........................","........................","........XXXXXXXX........","...XXXX.XXXXXXXX.XXXX...","...XXXXXXooooooXXXXXX...","...XXXX.XooooooX.XXXX...","...XXXX.XoXXXXoX.XXXX...","...XXXX.XoXXXXoX.XXXX...","........XoXXXXoX........","........XoXXXXoX........","........XooooooX........","...XXXX.XooooooX.XXXX...","...XXXX.XooooooX.XXXX...","...XXXXXXooooooXXXXXX...","...XXXX.XXXXXXXX.XXXX...","...XXXX..XXXXXX..XXXX...","........................","........................","........................"],"SPIKE":["........................","........................","...........XX...........","...........XX...........","..........XXXX..........","..........XXXX..........",".........XXXXXX........."],"HAMMER":["........................","........................",".....XXXXXXXXXXXXXX.....",".....XXXXXXXXXXXXXX.....",".....XXXXXXXXXXXXXX.....","...........XX...........","...........XX..........."],"TIPPER":["........................","........................","...XXXXXXXXXXXXXXXXXX...","....XXXXXXXXXXXXXXXX....",".....XXXXXXXXXXXXXX.....","........XX....XX........","........XX....XX........"],"SAW":["........................","........................","........X.XXXX.X........",".......XXXXXXXXXX.......",".......XXXooooXXX.......",".......XXXXXXXXXX.......","........X.XXXX.X........"],"GUN":["........................","........................","...........XX...........","...........XX...........","...........XX...........","..........XXXX..........",".........XXXXXX........."],"OIL":["........................","........................","........................","..........XXXX..........",".........XXooXX.........",".........XXooXX.........","..........XXXX.........."]};                      // {BODY:[24 strings], SPIKE:[...], ...}
 const NAMES = Object.keys(START), N = 24, S = 24;
 const COLS = ['#ffff00', '#00ffff', '#ff00ff', '#ffffff'];
 let art = {}, part = 'BODY', pen = 'X', undoStack = [];
 const pad = rows => { const g = rows.map(r => (r + '.'.repeat(N)).slice(0, N).split('')); while (g.length < N) g.push(Array(N).fill('.')); return g.slice(0, N) };
 const fresh = () => { NAMES.forEach(n => art[n] = pad(START[n])) };
-try { const s = JSON.parse(localStorage.getItem('truck_art_v1') || 'null'); if (s && NAMES.every(n => s[n] && s[n].length === N)) art = s; else fresh() } catch (e) { fresh() }
-const save = () => { try { localStorage.setItem('truck_art_v1', JSON.stringify(art)) } catch (e) {} };
+try { const s = JSON.parse(localStorage.getItem('truck_art_v2') || 'null'); if (s && NAMES.every(n => s[n] && s[n].length === N)) art = s; else fresh() } catch (e) { fresh() }
+const save = () => { try { localStorage.setItem('truck_art_v2', JSON.stringify(art)) } catch (e) {} };
 const weapon = () => part === 'BODY' ? (window.lastWeapon || 'HAMMER') : part;
 function whole(w) {                          // the body with weapon w on top
   return art.BODY.map((r, y) => r.map((v, x) => { const u = w ? art[w][y][x] : '.'; return u !== '.' ? u : v }));
@@ -116,7 +116,7 @@ function drawLook() {
   t.fillStyle = '#000'; t.fillRect(0, 0, 432, 120);
   for (let k = 0; k < 16; k++) paint(t, turned(a, k), 6 + (k % 8) * 54, 4 + (k >> 3) * 58, 2, COLS[k % 4]);
 }
-const asText = () => 'STOCK CARS TRUCK ART v1 - 24 x 24, facing up. X = colour   o = solid black   . = see-through\n' +
+const asText = () => 'STOCK CARS TRUCK ART v2 - a 20 x 20 truck in a 24 x 24 drawing, facing up. X = colour   o = solid black   . = see-through\n' +
   NAMES.map(n => '== ' + n + ' ==\n' + art[n].map(r => r.join('')).join('\n')).join('\n') + '\n';
 function refresh(keepText) {
   drawGrid(); drawLook(); save();
