@@ -80,3 +80,15 @@
   different trucks would be 11,520 bytes (the small cars take 4,864 today) - too much. Proposal put to Grant: ONE
   truck body shared by all (colour is free: it is the square's colour, not the drawing), with each weapon a small
   separate drawing on the nose. Then the whole set is about 2,304 bytes plus the weapons, less with flipped frames.
+
+## 16 Nov 2026 22:55 SAST - shared truck body agreed; the editor; why trial 2 is slow (cloud session, Claude)
+- Grant: "yes" to one truck body shared by all, each weapon a separate drawing over it.
+- tools/truck_art.txt: Claude's draft 24 x 24 body and six weapons (spike, hammer, tipper, saw, gun, oil).
+  docs/tools/truck_editor.html (tools/make_truck_editor.py builds it from the template): published as the Claude
+  artifact "Stock Cars Truck Editor", https://claude.ai/artifact/CjLeN5LA5Ky7xm1JuS72nt . Grant pastes his art back.
+- MEASURED (tests/stage_profile.py, SCEN=pack, 8 s): plain engine, track 1: 12.6 pictures a second, 241,000 T a
+  picture. Race-track look, track 1: 7.0 a second, 463,000 T. Race-track look, the oval: 7.1 a second, 462,000 T.
+  So the slowness comes with the race-track look as Breakfast Run built it, NOT from the oval or the wider road.
+  Biggest parts on the oval: screen copy 63,500, tiles 60,400 (15,000 on the plain engine), cars 22,700; the
+  listed parts do not add up to the total - where the rest goes has not been found yet.
+- NOT DONE: nothing in the game uses the 24 x 24 art yet.

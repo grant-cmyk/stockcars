@@ -1,6 +1,6 @@
 # CONTINUE - Stock Cars (working title)
 
-Stamped: 16 Nov 2026 22:45 SAST. Machine: Claude cloud container (no local machine). Commit: the one that adds this file (see git log -1).
+Stamped: 16 Nov 2026 22:55 SAST. Machine: Claude cloud container (no local machine). Commit: the one that adds this file (see git log -1).
 Repository: GitHub grant-cmyk/stockcars (private), branch main. Identity: Personal. Classification: Internal.
 
 ## What this is
@@ -25,10 +25,13 @@ Weapon trucks racing on a scrolling oval, ZX Spectrum 48K, built on a copy of th
 Read docs/reference/OPTIMISATION-PLAN.md before adding anything: Breakfast Run ended with about 23 bytes free.
 
 ## Waiting on Grant
-- Truck size DECIDED: 24 x 24. Open: one shared truck body + separate weapon drawings (Claude's proposal, for memory)?
+- Truck art: 24 x 24, ONE shared body + weapon drawings (agreed). Grant to redraw Claude's drafts in the editor
+  (https://claude.ai/artifact/CjLeN5LA5Ky7xm1JuS72nt) and paste the text back -> tools/truck_art.txt.
 - Drive build/stockcars_oval_trial2.tap (black road, green grass; RACETRACK=1 TRACK=6 SKID=1 BDIR=oval_rt
   OUT=stockcars_oval_trial2 bash build.sh): the look, and is the skid enough? Road width: agreed, 88 px.
-- Known: about 6.5 pictures a second on this tape (half the usual) - to be looked into next.
+- Known: about 7 pictures a second with the race-track look (12.6 without) on ANY track - it comes from the look as
+  Breakfast Run built it. Next: find where the unlisted T-states go (tests/stage_profile.py), and take any speed-up
+  the Breakfast Run session makes to src/racetrack.asm.
 - Weapon ideas he raised, to be offered as options on the build screen: oil dropped behind, a shot at the car in front.
 - What happens to a truck with no armour left; how you win; one or two players; the name.
 - Notion Workstreams row: not created (this session is on the TTRO account; the row belongs under Personal).

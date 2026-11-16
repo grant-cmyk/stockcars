@@ -17,3 +17,7 @@ build/roadwhite*/
 build/map40_t*
 build/zx0
 build/multi/
+
+# trial builds of the oval, made in a copy of src/
+build/oval_rt*/
+build/racetrack/
