@@ -124,3 +124,22 @@
 - STILL WRONG: the race order panel has no truck pictures; trucks that overlap share colour squares; every truck
   has the hammer and no weapon works; the panel, mug and logo are Breakfast Run's.
 - Version: 0.4.1 (patch: the truck redrawn).
+
+## 16 Nov 2026 23:15 SAST - the broken-up truck fixed, trial 5 (cloud session, Claude)
+- Grant sent two screenshots of trial 3/4: his red truck drawn as a block of stripes, heading down the screen.
+- CAUSE (found and fixed): a truck heading 5-11 is drawn from another heading's picture read upside down (FLIP=1). The
+  step back to the row above was written for the small cars' 4-byte rows (sub 2*4 in draw_car, src/racer.asm); the big
+  cars' rows are 6 bytes, so every such heading came out as stripes. Breakfast Run never had FLIP and the big cars
+  together. Now sub 2*6 for the big cars.
+- ALSO fixed, same family (src/racetrack.asm): rt_car_sq, which works out the colour of each square a car is in, read
+  the small cars' 4-byte rows and 16 x 24 pixel box. A big-car version: 6-byte rows, 4 squares across, 5 down (rt_bm
+  15 bytes). And the black rim's patch now reaches the third pair of bytes (dc_ink4, dc_ink5).
+- VERIFIED: all 16 headings photographed on the road in the emulator - clean (trial 4: headings 5, 6, 7, 9, 10, 11
+  striped). On the white line, across the grass edge and on the grass: no stripes; the truck is its colour on grass
+  and takes the square's green in a mixed square, as the rule says. tests/rt_laps.py: all five lap, about 16 s.
+  Track 1's plain tape is still byte for byte Breakfast Run's.
+- Trial tape: build/stockcars_oval_trial5.tap
+  (TRUCKS=1 RACETRACK=1 TRACK=6 SKID=1 BDIR=oval_rt_trucks OUT=stockcars_oval_trial5 bash build.sh big).
+  Pictures: docs/design/trials/oval_trial5.gif (a full lap), oval_trial5_far_bend.png. Trial 4's tape removed (broken).
+- STILL WRONG: as trial 4's list (panel pictures, shared colour squares when trucks overlap, hammer only, no weapons).
+- Version: 0.4.2 (patch: a drawing fault fixed).

@@ -43,7 +43,7 @@
 ; =====================================================================
 RT_SH   equ COPIER+0x200 ; (0xEA00: above the looped copy routine)
 RT_AL   equ RT_SH+21*32     ; rt_al, below
-rt_bm   equ RT_AL+3*96      ; rt_car_sq: the car's picture, ORed, by row of squares - 6 bytes (on one page: 0xEDC0)
+rt_bm   equ RT_AL+3*96      ; rt_car_sq: the car's picture, ORed, by row of squares - 6 bytes, 15 for the big cars (on one page: 0xEDC0)
 RT_DATA equ RT_SH+0x400     ; the grass's rows and pictures (rt_world.asm, copied here by start_once): the rows' index,
 gtiles  equ RT_DATA         ; then the part-grass tiles' pictures from number 16 (so both are found from here)
 ;RT_SH_              ; rt_sh: the colour squares of screen rows 0-20, laid out as on the screen (32 a row). A square
@@ -611,6 +611,10 @@ rtc_patch:
         ld (dc_ink1),a
         ld (dc_ink2),a
         ld (dc_ink3),a
+        if CAR_U - 15           ; (the big cars' third pair of bytes)
+        ld (dc_ink4),a
+        ld (dc_ink5),a
+        endif
         ret
 
 ; RT_CAR_SQ (from draw_car, once the picture's place is known: wxu, dc_row0, dc_count, DE = its rows): the squares the
@@ -618,6 +622,162 @@ rtc_patch:
 ; (mask and ink ORed) for each row of squares they fall in: 2 bytes for each of 3 (rt_bm). Then, with the picture's place
 ; across (0-7 pixels into its first byte), each row's 16 pixels are looked at as the 3 squares they lie in.
 ; It does not go back into draw_car: its RET is draw_car's own.
+        if CAR_U - 15
+; STOCK CARS - the BIG cars' pictures (24 wide: 6 bytes a row, up to 27 rows): up to 4 squares across and 5 down.
+; 3 bytes for each of 5 rows of squares in rt_bm; otherwise as the small cars' routine below.
+rt_car_sq:
+        pop af                  ; (the way back into draw_car)
+        ld hl,rt_bm
+        xor a
+        ld b,15
+rq_z0:
+        ld (hl),a
+        inc l
+        djnz rq_z0
+        ld a,(dc_count)
+        ld b,a
+        ld a,(dc_row0)
+        ld c,a                  ; C = the buffer line of the row in hand
+        and 0xF8
+        ld (rq_r0+1),a          ; (the first line of the first row of squares)
+rq_acc:
+        ld a,c
+rq_r0:  sub 0
+        rrca
+        rrca
+        rrca
+        and 7                   ; which row of squares (0-4)
+        ld l,a
+        add a,a
+        add a,l                 ; 3 bytes each
+        add a,rt_bm AND 255
+        ld l,a
+        ld h,rt_bm/256
+        rept 3
+        ld a,(de)               ; 8 pixels: mask, ink
+        inc de
+        or (hl)
+        ld (hl),a
+        ld a,(de)
+        inc de
+        or (hl)
+        ld (hl),a
+        inc l
+        endm
+        ld a,(dc_flip)          ; (a picture read upside down: back two rows)
+        or a
+        jr z,rq_fw
+        ld a,e
+        sub 12
+        ld e,a
+        jr nc,rq_fw
+        dec d
+rq_fw:
+        inc c
+        djnz rq_acc
+        ld a,(wxu)              ; the picture's 24 pixels start at buffer x = wxu + 1
+        inc a
+        ld e,a
+        and 7
+        ld b,a
+        ld a,0xFF               ; C = the bits of a picture byte that stay in its own square
+        jr z,rq_k1
+rq_k0:
+        add a,a
+        djnz rq_k0
+rq_k1:
+        ld c,a
+        ld a,e
+        rrca
+        rrca
+        rrca
+        and 0x1F
+        ld (rq_col0),a          ; the picture's first byte column
+        ld e,a
+        ld a,(dc_row0)          ; HL = the square in rt_sh of its first line and that column (- 1: byte 2 is column 1)
+        rrca
+        rrca
+        rrca
+        and 0x1F
+        rrca
+        rrca
+        rrca
+        ld l,a
+        and 3
+        add a,RT_SH/256
+        ld h,a
+        ld a,l
+        and 0xE0
+        add a,e
+        dec a
+        ld l,a
+        ld a,5
+        ld (rt_cnt),a
+        ld de,rt_bm
+rq_band:
+        push de
+        ld a,(de)
+        ld (rq_v0),a
+        inc e
+        ld a,(de)
+        ld (rq_v1),a
+        inc e
+        ld a,(de)
+        ld (rq_v2),a
+        ld a,(rq_v0)            ; the first square: the first byte's own bits
+        and c
+        jr z,rq_s1
+        ld a,(rq_col0)          ; (byte 0 has no square)
+        or a
+        call nz,rq_cell
+rq_s1:
+        inc l
+        ld a,c
+        cpl
+        ld b,a
+        ld a,(rq_v0)
+        and b
+        ld d,a
+        ld a,(rq_v1)
+        and c
+        or d
+        call nz,rq_cell
+        inc l
+        ld a,c
+        cpl
+        ld b,a
+        ld a,(rq_v1)
+        and b
+        ld d,a
+        ld a,(rq_v2)
+        and c
+        or d
+        call nz,rq_cell
+        inc l
+        ld a,c
+        cpl
+        ld b,a
+        ld a,(rq_v2)
+        and b
+        call nz,rq_cell
+        dec l
+        dec l
+        dec l
+        ld de,32
+        add hl,de
+        pop de
+        inc e
+        inc e
+        inc e
+        ld a,(rt_cnt)
+        dec a
+        ld (rt_cnt),a
+        jp nz,rq_band
+        ret
+rq_v0:  db 0
+rq_v1:  db 0
+rq_v2:  db 0
+        else
 rt_car_sq:
         pop af                  ; (the way back into draw_car)
         ld hl,rt_bm
@@ -757,6 +917,7 @@ rq_s2:
         ld (rt_cnt),a
         jr nz,rq_band
         ret
+        endif
 rq_cell:
         ld a,(hl)
         cp RT_EDGE

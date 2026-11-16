@@ -2437,12 +2437,12 @@ dc_e1_x:
         inc de
         ld c,a
         ld a,(bc)               ;   ink: column k+1 ...
-        or (hl)
+dc_ink4: or (hl)                 ; (RACETRACK patches these two as well, with the big cars: rt_car)
         ld (hl),a
         dec b
         dec l
         ld a,(bc)               ;   ... and column k
-        or (hl)
+dc_ink5: or (hl)
         ld (hl),a
         dec l                   ; back to the row's first byte
         dec l
@@ -2468,7 +2468,11 @@ dc_same:
         if OPT_FLIP
 dc_step: jr dc_fwd              ; (upside down: the JR's distance is 0 - DE back to the row above the one just drawn)
         ld a,e
+        if CAR_U = 15
         sub 2*4
+        else
+        sub 2*6                 ; (STOCK CARS: a big car's row is 6 bytes - with 2*4 here every big car read upside down
+        endif                   ; came out as stripes; Breakfast Run never had FLIP and the big cars together)
         ld e,a
         jr nc,dc_fwd
         dec d
