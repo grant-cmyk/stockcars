@@ -21,3 +21,14 @@
 - Open (Grant): what happens to a truck with no armour left (out, or stopped then back); how you win (assumed:
   first to finish the laps); one or two players; the game's name.
 - Version: 0.1.0, the baseline (first commit; minor numbers until there is a tape Grant has driven).
+
+## 16 Nov 2026 21:37 SAST - the copied engine builds and passes (cloud session, Claude)
+- Toolchain brought into the session by cloning beside this repository: grant-cmyk/claude-plugins-personal
+  (the tape maker, plugins/retro/skills/zxspectrum/scripts/build.sh) and grant-cmyk/zx-emulator (built with
+  sh build-linux.sh -> ../zx-emulator/zxdev).
+- build.sh changed: it no longer dies when the retro plugin is not synced into Claude; it also looks in
+  ../claude-plugins-personal, and says so plainly if it finds no tape maker.
+- Added what the build and tests read: build/*.txt and *.json inputs, docs/design/tracks.
+- VERIFIED: bash build.sh makes build/racer.tap byte for byte the same as Breakfast Run's (d2f8edf);
+  tests/drive_test.py, lapcount_test.py, finish_test.py, damage_test.py all RESULT: PASS. The other suites not run.
+- Version: 0.1.1 (patch: build fix only, the game unchanged).

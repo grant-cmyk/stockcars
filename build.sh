@@ -46,8 +46,11 @@ fi
 # CHOOSE=1: the choose screen between the title and the race - track, driver, car, extra (src/choose.asm). Only with the
 # several-tracks build: use tools/build_choose.sh -> build/racer_choose.tap
 printf 'OPT_CHOOSE equ %s               ; 1: the choose screen (tools/build_choose.sh: not for build.sh alone)\n' "${CHOOSE:-0}" >> "$ROOT/src/options.asm"
-B=$(ls /root/.claude/plugins/synced/*/retro/skills/zxspectrum/scripts/build.sh 2>/dev/null | head -1)
+# The tape maker: ZX_BUILD if set; else the retro plugin as synced into Claude; else a checkout of
+# grant-cmyk/claude-plugins-personal beside this repository (cloud sessions on another account have no synced plugin).
+B=$(ls /root/.claude/plugins/synced/*/retro/skills/zxspectrum/scripts/build.sh "$ROOT"/../claude-plugins-personal/plugins/retro/skills/zxspectrum/scripts/build.sh 2>/dev/null | head -1 || true)
 B=${ZX_BUILD:-$B}
+[ -n "$B" ] || { echo "build.sh: no tape maker found (set ZX_BUILD, or clone grant-cmyk/claude-plugins-personal beside this repository)"; exit 2; }
 # ONE TRACK A BUILD (15 Nov 2026: memory has no room for two). TRACK unset or 1: track 1, from src/ as
 # it stands -> build/racer.tap. TRACK=2: THE BREAKFAST CLUB -> build/racer_track2.tap (.bin, .sym):
 # a copy of src/ is made in build/track2/src, tools/make_world.py writes that track's world, waypoints,
