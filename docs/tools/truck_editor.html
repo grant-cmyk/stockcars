@@ -1,0 +1,146 @@
+<title>Stock Cars Truck Editor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@600;700&family=JetBrains+Mono&display=swap">
+<style>
+/* layout: the drawing grid on the left, what it looks like in the game on the right; one column on a phone. Single dark look: a TV in a dim room. */
+:root{--bg:#14161c;--panel:#1d2029;--fg:#e8e6df;--dim:#a3a6b3;--yel:#ffe14a;--cyn:#4ad9e8;--line:#343846;--cell:#0b0c10;
+ --display:"Space Grotesk",system-ui,sans-serif;--body:Inter,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);padding-block:24px 48px;
+ padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1{font:700 1.6rem/1.15 var(--display);margin:0}
+h2{font:700 1rem/1.2 var(--display);margin:0;color:var(--yel)}
+p{margin:0;max-width:70ch}
+.tag{font:600 .72rem var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--cyn)}
+.meta{color:var(--dim);font-size:.88rem}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px}
+@media (max-width:760px){.cols{grid-template-columns:minmax(0,1fr)}}
+.box{background:var(--panel);border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:600 .85rem var(--body);color:var(--fg);background:#2a2e3a;border:1px solid var(--line);padding:7px 11px;cursor:pointer}
+button:hover{border-color:var(--cyn)}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--cyn);outline-offset:2px}
+button[aria-pressed="true"]{background:var(--yel);color:#14161c;border-color:var(--yel)}
+canvas{display:block;max-width:100%;image-rendering:pixelated;background:var(--cell);border:1px solid var(--line)}
+#grid{width:100%;height:auto;touch-action:none;cursor:crosshair}
+textarea{width:100%;min-height:150px;box-sizing:border-box;background:var(--cell);color:var(--fg);border:1px solid var(--line);font:12px/1.25 var(--mono);padding:8px}
+#msg{color:var(--cyn);min-height:1.4em}
+</style>
+<main>
+<header style="display:flex;flex-direction:column;gap:8px">
+<span class="tag">ZX Spectrum 48K &middot; Stock Cars &middot; Personal &middot; Internal</span>
+<h1>Truck editor, 24 &times; 24</h1>
+<p>One truck body is shared by every truck. Each weapon is drawn on top of it. Pick a part, draw, then press <b>Copy the art</b> and paste it back to Claude.</p>
+</header>
+<div class="cols">
+<section class="box">
+<h2>1. Pick the part to draw</h2>
+<div class="row" id="parts"></div>
+<h2>2. Pick a pen and draw</h2>
+<div class="row" id="pens">
+<button id="penX" data-pen="X">Colour</button>
+<button id="penO" data-pen="o">Solid black</button>
+<button id="penE" data-pen=".">Rub out</button>
+<button id="undo">Undo</button>
+<button id="clear">Clear this part</button>
+</div>
+<canvas id="grid" width="576" height="576" aria-label="Drawing grid, 24 by 24"></canvas>
+<p class="meta"><b>Colour</b> is drawn in the truck's colour. <b>Solid black</b> is part of the truck and hides the road behind it. Rubbed-out squares are see-through. The other layer shows faintly so you can line things up.</p>
+</section>
+<section class="box">
+<h2>3. How it looks in the game</h2>
+<canvas id="look" width="440" height="250" aria-label="The truck at real size, double size and four times size, in four colours"></canvas>
+<p class="meta">Top: four times size. Middle: double size on the road. Bottom: real size, in the four truck colours.</p>
+<h2>All 16 directions</h2>
+<canvas id="turn" width="432" height="120" aria-label="The truck turned to all sixteen directions"></canvas>
+<p class="meta">Turned by the computer, so the slanted ones look ragged. In the game the slanted drawings get tidied by hand.</p>
+<h2>4. Send it back</h2>
+<div class="row"><button id="copy">Copy the art</button><button id="load">Load art from the box</button><span id="msg" role="status"></span></div>
+<textarea id="text" spellcheck="false" aria-label="The art as text"></textarea>
+</section>
+</div>
+</main>
+<script>
+const START = {"BODY":["........................","........................","........................","........................","........................","........................","........XXXXXXXX........",".XXXXX.XXXXXXXXXX.XXXXX.",".X.X.XXXooooooooXXX.X.X.",".XXXXXXXooooooooXXXXXXX.",".X.X.X.XXXXXXXXXX.X.X.X.",".XXXXX.XooooooooX.XXXXX.",".X.X.X.XoXXXXXXoX.X.X.X.",".XXXXX.XoXooooXoX.XXXXX.",".......XoXooooXoX.......",".......XoXXXXXXoX.......",".XXXXX.XooooooooX.XXXXX.",".X.X.X.XXXXXXXXXX.X.X.X.",".XXXXXXXooooooooXXXXXXX.",".X.X.XXXooooooooXXX.X.X.",".XXXXX.XXXXXXXXXX.XXXXX.",".X.X.X..XXXXXXXX..X.X.X.",".XXXXX............XXXXX.","........................"],"SPIKE":["...........XX...........","...........XX...........","..........XXXX..........","..........XXXX..........",".........XXXXXX.........",".........XXXXXX........."],"HAMMER":["....XXXXXXXXXXXXXXXX....","....XooooooooooooooX....","....XXXXXXXXXXXXXXXX....","..........XXXX..........","..........XXXX..........","..........XXXX.........."],"TIPPER":["..XXXXXXXXXXXXXXXXXXXX..","...XooooooooooooooooX...","....XooooooooooooooX....",".....XXXXXXXXXXXXXX.....",".......XX......XX.......",".......XX......XX......."],"SAW":[".......X.X.XX.X.X.......","......XXXXXXXXXXXX......",".....XXXXooooooXXXX.....","......XXXooooooXXX......",".....XXXXXXXXXXXXXX.....",".......X.X.XX.X.X......."],"GUN":["...........XX...........","...........XX...........","...........XX...........","..........XXXX..........",".........XXXXXX.........",".........XooooX........."],"OIL":["........................",".........XXXXXX.........","........XooooooX........","........XoXXXXoX........","........XooooooX........",".........XXXXXX........."]};                      // {BODY:[24 strings], SPIKE:[...], ...}
+const NAMES = Object.keys(START), N = 24, S = 24;
+const COLS = ['#ffff00', '#00ffff', '#ff00ff', '#ffffff'];
+let art = {}, part = 'BODY', pen = 'X', undoStack = [];
+const pad = rows => { const g = rows.map(r => (r + '.'.repeat(N)).slice(0, N).split('')); while (g.length < N) g.push(Array(N).fill('.')); return g.slice(0, N) };
+const fresh = () => { NAMES.forEach(n => art[n] = pad(START[n])) };
+try { const s = JSON.parse(localStorage.getItem('truck_art_v1') || 'null'); if (s && NAMES.every(n => s[n] && s[n].length === N)) art = s; else fresh() } catch (e) { fresh() }
+const save = () => { try { localStorage.setItem('truck_art_v1', JSON.stringify(art)) } catch (e) {} };
+const weapon = () => part === 'BODY' ? (window.lastWeapon || 'HAMMER') : part;
+function whole(w) {                          // the body with weapon w on top
+  return art.BODY.map((r, y) => r.map((v, x) => { const u = w ? art[w][y][x] : '.'; return u !== '.' ? u : v }));
+}
+const grid = document.getElementById('grid'), g = grid.getContext('2d');
+function drawGrid() {
+  g.fillStyle = '#0b0c10'; g.fillRect(0, 0, 576, 576);
+  const other = part === 'BODY' ? null : art.BODY, mine = art[part];
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const v = mine[y][x], o = other ? other[y][x] : '.';
+    if (v === 'X') g.fillStyle = '#ffe14a'; else if (v === 'o') g.fillStyle = '#5b6072';
+    else if (o === 'X') g.fillStyle = '#4a4420'; else if (o === 'o') g.fillStyle = '#262933'; else g.fillStyle = '#0b0c10';
+    g.fillRect(x * S, y * S, S, S);
+  }
+  g.strokeStyle = '#2a2d38'; g.lineWidth = 1; g.beginPath();
+  for (let i = 0; i <= N; i++) { g.moveTo(i * S + .5, 0); g.lineTo(i * S + .5, 576); g.moveTo(0, i * S + .5); g.lineTo(576, i * S + .5) }
+  g.stroke();
+  g.strokeStyle = '#4ad9e8'; g.beginPath();                       // the 8 x 8 colour squares
+  for (let i = 0; i <= 3; i++) { g.moveTo(i * 192 + .5, 0); g.lineTo(i * 192 + .5, 576); g.moveTo(0, i * 192 + .5); g.lineTo(576, i * 192 + .5) }
+  g.stroke();
+}
+function paint(c, a, ox, oy, s, col) {
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const v = a[y][x]; if (v === '.') continue; c.fillStyle = v === 'X' ? col : '#000'; c.fillRect(ox + x * s, oy + y * s, s, s);
+  }
+}
+function turned(a, k) {                      // heading k of 16, clockwise from up; nearest pixel
+  const t = k * Math.PI / 8, cs = Math.cos(t), sn = Math.sin(t), out = [];
+  for (let y = 0; y < N; y++) { out.push([]); for (let x = 0; x < N; x++) {
+    const dx = x - 11.5, dy = y - 11.5, sx = Math.round(cs * dx + sn * dy + 11.5), sy = Math.round(-sn * dx + cs * dy + 11.5);
+    out[y].push(sx >= 0 && sx < N && sy >= 0 && sy < N ? a[sy][sx] : '.');
+  } }
+  return out;
+}
+function drawLook() {
+  const c = document.getElementById('look').getContext('2d'), a = whole(weapon());
+  c.fillStyle = '#000'; c.fillRect(0, 0, 440, 250);
+  c.fillStyle = '#00d700'; c.fillRect(300, 0, 140, 250);
+  c.fillStyle = '#d7d7d7'; for (let y = 4; y < 250; y += 16) c.fillRect(278, y, 2, 8);
+  paint(c, a, 12, 10, 4, COLS[0]);
+  COLS.forEach((col, i) => paint(c, i % 2 ? turned(a, i * 2) : a, 12 + i * 62, 124, 2, col));
+  COLS.forEach((col, i) => paint(c, a, 12 + i * 34, 196, 1, col));
+  paint(c, turned(a, 2), 130, 20, 2, COLS[1]); paint(c, turned(a, 4), 196, 20, 2, COLS[2]);
+  const t = document.getElementById('turn').getContext('2d');
+  t.fillStyle = '#000'; t.fillRect(0, 0, 432, 120);
+  for (let k = 0; k < 16; k++) paint(t, turned(a, k), 6 + (k % 8) * 54, 4 + (k >> 3) * 58, 2, COLS[k % 4]);
+}
+const asText = () => 'STOCK CARS TRUCK ART v1 - 24 x 24, facing up. X = colour   o = solid black   . = see-through\n' +
+  NAMES.map(n => '== ' + n + ' ==\n' + art[n].map(r => r.join('')).join('\n')).join('\n') + '\n';
+function refresh(keepText) {
+  drawGrid(); drawLook(); save();
+  if (!keepText) document.getElementById('text').value = asText();
+  document.querySelectorAll('#parts button').forEach(b => b.setAttribute('aria-pressed', b.dataset.part === part));
+  document.querySelectorAll('#pens button[data-pen]').forEach(b => b.setAttribute('aria-pressed', b.dataset.pen === pen));
+}
+NAMES.forEach(n => { const b = document.createElement('button'); b.id = 'part-' + n; b.dataset.part = n; b.textContent = n === 'BODY' ? 'Truck body' : n[0] + n.slice(1).toLowerCase();
+  b.onclick = () => { part = n; if (n !== 'BODY') window.lastWeapon = n; refresh() }; document.getElementById('parts').appendChild(b) });
+document.querySelectorAll('#pens button[data-pen]').forEach(b => b.onclick = () => { pen = b.dataset.pen; refresh(true) });
+let down = false;
+function at(e) { const r = grid.getBoundingClientRect(); return [Math.floor((e.clientX - r.left) / r.width * N), Math.floor((e.clientY - r.top) / r.height * N)] }
+function put(e) { const [x, y] = at(e); if (x < 0 || y < 0 || x >= N || y >= N || art[part][y][x] === pen) return; art[part][y][x] = pen; refresh() }
+grid.addEventListener('pointerdown', e => { down = true; undoStack.push(JSON.stringify(art)); if (undoStack.length > 60) undoStack.shift(); grid.setPointerCapture(e.pointerId); put(e) });
+grid.addEventListener('pointermove', e => { if (down) put(e) });
+grid.addEventListener('pointerup', () => { down = false });
+document.getElementById('undo').onclick = () => { if (undoStack.length) { art = JSON.parse(undoStack.pop()); refresh() } };
+document.getElementById('clear').onclick = () => { undoStack.push(JSON.stringify(art)); art[part] = pad([]); refresh() };
+const say = t => { document.getElementById('msg').textContent = t };
+document.getElementById('copy').onclick = () => { const ta = document.getElementById('text'); ta.value = asText();
+  navigator.clipboard.writeText(ta.value).then(() => say('Copied. Paste it into the chat.'), () => { ta.select(); say('Select all of the box and copy it.') }) };
+document.getElementById('load').onclick = () => { const t = document.getElementById('text').value, re = /==\s*(\w+)\s*==\s*\n((?:[Xo.]+\s*\n?)+)/g; let m, n = 0;
+  undoStack.push(JSON.stringify(art));
+  while ((m = re.exec(t))) if (NAMES.includes(m[1])) { art[m[1]] = pad(m[2].trim().split(/\s+/)); n++ }
+  say(n ? 'Loaded ' + n + ' parts.' : 'No parts found in the box.'); refresh() };
+refresh();
+</script>
