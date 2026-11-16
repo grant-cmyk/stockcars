@@ -48,3 +48,20 @@
   cereal O's stand along the road's edges" (the test was written for a 72 px road; the O's are to go anyway).
 - A lap is only about 14 seconds: races will need more laps, or a bigger oval (map height is free, width is not).
 - Version: 0.2.0 (minor: a new track and a new build switch).
+
+## 16 Nov 2026 22:45 SAST - the oval with the black road, trial 2 (cloud session, Claude)
+- Grant on trial 1: "road is wide enough - but need the black road and design I am going for in the new breakfast
+  run road track design".
+- Brought across the Breakfast Run race-track trial (grant-cmyk/breakfastrun, branch claude/breakfast-run-layout-ik0vpe,
+  commits 1f3e77e..ddf2236: src/racetrack.asm, rt_world.asm, the RACETRACK=1 switch, its tests). One conflict in
+  tools/make_world.py, resolved keeping both the oval and the race track.
+- Trial tape: build/stockcars_oval_trial2.tap
+  (RACETRACK=1 TRACK=6 SKID=1 BDIR=oval_rt OUT=stockcars_oval_trial2 bash build.sh).
+  Pictures from the real tape: docs/design/trials/oval_trial2.gif, oval_trial2_bend.png, oval_trial2_grid.png.
+- VERIFIED (tests/rt_laps.py, 60 s race by autopilot): all five cars lap, about 16 s a lap. Track 1's plain tape is
+  still byte for byte Breakfast Run's.
+- CONCERN: 389 pictures in 60 s, about 6.5 a second - roughly half Breakfast Run's usual 12. Not looked into yet
+  (the wider road and the long grass edges of an oval may be why). The game itself keeps its speed.
+- NOT VERIFIED: tests/racetrack_test.py not run on the oval; feel and sound. A small notch shows in the grass edge
+  on the first bend (see oval_trial2_bend.png). The panel, mug, logo and cars are still Breakfast Run's.
+- Version: 0.3.0 (minor: the race-track look on the oval).
