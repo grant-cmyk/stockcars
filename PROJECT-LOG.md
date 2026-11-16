@@ -65,3 +65,11 @@
 - NOT VERIFIED: tests/racetrack_test.py not run on the oval; feel and sound. A small notch shows in the grass edge
   on the first bend (see oval_trial2_bend.png). The panel, mug, logo and cars are still Breakfast Run's.
 - Version: 0.3.0 (minor: the race-track look on the oval).
+
+## 16 Nov 2026 22:50 SAST - bigger sprites asked for (cloud session, Claude)
+- Grant: "I think for the stock car racing we will go for bigger sprites".
+- Tried Breakfast Run's 20 x 20 big cars on the black-road oval (bash build.sh big with RACETRACK=1 TRACK=6): it does
+  NOT fit - "the room under 0x8000 runs into the data kept at its top". Bigger trucks need a memory plan first.
+- Mock-up of 16, 24 and 32 pixel trucks on the 88 px road: docs/design/mockups/truck_sizes.png
+  (tools/mockups/make_size_mock.py, SC=1, 1.5, 2); added to the page docs/design/mockups/first_look.html.
+  Claude recommends 24. Waiting for Grant to choose.

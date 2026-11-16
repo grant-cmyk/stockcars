@@ -91,164 +91,164 @@ tower_cars:
 ; (frames are 24 wide - 3 (mask, ink) byte pairs a row - and only the rows in use are kept)
 big_tab:
         dw bf_0_0
-        db 6,16
+        db 5,20
         dw bf_0_1
-        db 6,17
+        db 5,22
         dw bf_0_2
-        db 6,16
+        db 5,22
         dw bf_0_3
-        db 7,14
+        db 6,21
         dw bf_0_4
-        db 8,12
-        dw bf_0_3+52
-        db 7,142
-        dw bf_0_2+60
-        db 6,144
-        dw bf_0_1+64
-        db 5,145
-        dw bf_0_0+60
-        db 6,144
-        dw bf_0_15+64
-        db 5,145
-        dw bf_0_14+60
-        db 6,144
-        dw bf_0_13+52
-        db 7,142
+        db 5,19
+        dw bf_0_3+120
+        db 2,149
+        dw bf_0_2+126
+        db 2,150
+        dw bf_0_1+126
+        db 2,150
+        dw bf_0_8
+        db 4,20
+        dw bf_0_15+126
+        db 2,150
+        dw bf_0_14+126
+        db 2,150
+        dw bf_0_13+120
+        db 2,149
         dw bf_0_12
-        db 8,12
+        db 5,19
         dw bf_0_13
-        db 7,14
+        db 6,21
         dw bf_0_14
-        db 6,16
+        db 5,22
         dw bf_0_15
-        db 6,17
+        db 5,22
         dw bf_1_0
-        db 6,16
+        db 4,21
         dw bf_1_1
-        db 6,17
+        db 3,25
         dw bf_1_2
-        db 6,17
+        db 2,26
         dw bf_1_3
-        db 7,15
+        db 3,24
         dw bf_1_4
-        db 8,12
-        dw bf_1_3+56
-        db 6,143
-        dw bf_1_2+64
-        db 5,145
-        dw bf_1_1+64
-        db 5,145
-        dw bf_1_0+60
-        db 6,144
-        dw bf_1_15+64
-        db 5,145
-        dw bf_1_14+64
-        db 5,145
-        dw bf_1_13+56
-        db 6,143
+        db 5,19
+        dw bf_1_3+138
+        db 2,152
+        dw bf_1_2+150
+        db 1,154
+        dw bf_1_1+144
+        db 1,153
+        dw bf_1_8
+        db 4,21
+        dw bf_1_15+144
+        db 1,153
+        dw bf_1_14+150
+        db 1,154
+        dw bf_1_13+138
+        db 2,152
         dw bf_1_12
-        db 8,12
+        db 5,19
         dw bf_1_13
-        db 7,15
+        db 3,24
         dw bf_1_14
-        db 6,17
+        db 2,26
         dw bf_1_15
-        db 6,17
+        db 3,25
         dw bf_2_0
-        db 7,13
+        db 6,19
         dw bf_2_1
-        db 5,17
+        db 3,25
         dw bf_2_2
-        db 5,17
+        db 2,27
         dw bf_2_3
-        db 5,17
+        db 3,25
         dw bf_2_4
-        db 8,13
-        dw bf_2_3+64
-        db 6,145
-        dw bf_2_2+64
-        db 6,145
-        dw bf_2_1+64
-        db 6,145
+        db 4,21
+        dw bf_2_3+144
+        db 1,153
+        dw bf_2_2+156
+        db 0,155
+        dw bf_2_1+144
+        db 1,153
         dw bf_2_8
-        db 8,13
-        dw bf_2_15+64
-        db 6,145
-        dw bf_2_14+64
-        db 6,145
-        dw bf_2_13+64
-        db 6,145
+        db 4,19
+        dw bf_2_15+144
+        db 1,153
+        dw bf_2_14+156
+        db 0,155
+        dw bf_2_13+144
+        db 1,153
         dw bf_2_12
-        db 7,13
+        db 4,21
         dw bf_2_13
-        db 5,17
+        db 3,25
         dw bf_2_14
-        db 5,17
+        db 2,27
         dw bf_2_15
-        db 5,17
+        db 3,25
         dw bf_3_0
-        db 6,16
+        db 5,20
         dw bf_3_1
-        db 6,17
+        db 5,22
         dw bf_3_2
-        db 6,17
+        db 5,22
         dw bf_3_3
-        db 6,17
+        db 5,22
         dw bf_3_4
-        db 7,14
-        dw bf_3_3+64
-        db 5,145
-        dw bf_3_2+64
-        db 5,145
-        dw bf_3_1+64
-        db 5,145
-        dw bf_3_0+60
-        db 6,144
-        dw bf_3_15+64
-        db 5,145
-        dw bf_3_14+64
-        db 5,145
-        dw bf_3_13+64
-        db 5,145
+        db 5,19
+        dw bf_3_3+126
+        db 2,150
+        dw bf_3_2+126
+        db 2,150
+        dw bf_3_1+126
+        db 2,150
+        dw bf_3_8
+        db 4,20
+        dw bf_3_15+126
+        db 2,150
+        dw bf_3_14+126
+        db 2,150
+        dw bf_3_13+126
+        db 2,150
         dw bf_3_12
-        db 7,14
+        db 5,19
         dw bf_3_13
-        db 6,17
+        db 5,22
         dw bf_3_14
-        db 6,17
+        db 5,22
         dw bf_3_15
-        db 6,17
+        db 5,22
         dw bf_4_0
-        db 9,13
+        db 5,20
         dw bf_4_1
-        db 8,14
+        db 4,23
         dw bf_4_2
-        db 9,13
+        db 4,23
         dw bf_4_3
-        db 9,12
+        db 5,21
         dw bf_4_4
-        db 10,9
-        dw bf_4_3+44
-        db 7,140
-        dw bf_4_6
-        db 7,13
-        dw bf_4_1+52
-        db 6,142
+        db 6,17
+        dw bf_4_3+120
+        db 3,149
+        dw bf_4_2+132
+        db 2,151
+        dw bf_4_1+132
+        db 2,151
         dw bf_4_8
-        db 6,13
-        dw bf_4_15+52
-        db 6,142
-        dw bf_4_10
-        db 6,13
-        dw bf_4_13+44
-        db 7,140
+        db 4,20
+        dw bf_4_15+132
+        db 2,151
+        dw bf_4_14+132
+        db 2,151
+        dw bf_4_13+120
+        db 3,149
         dw bf_4_12
-        db 9,9
+        db 6,17
         dw bf_4_13
-        db 9,12
+        db 5,21
         dw bf_4_14
-        db 8,13
+        db 4,23
         dw bf_4_15
-        db 8,14
+        db 4,23
 
 ; the big-car frames that did not fit below the program (0 bytes)

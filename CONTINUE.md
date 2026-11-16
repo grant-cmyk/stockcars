@@ -25,6 +25,7 @@ Weapon trucks racing on a scrolling oval, ZX Spectrum 48K, built on a copy of th
 Read docs/reference/OPTIMISATION-PLAN.md before adding anything: Breakfast Run ended with about 23 bytes free.
 
 ## Waiting on Grant
+- Truck size: 16, 24 or 32 pixels (docs/design/mockups/truck_sizes.png). Claude recommends 24. Needs a memory plan.
 - Drive build/stockcars_oval_trial2.tap (black road, green grass; RACETRACK=1 TRACK=6 SKID=1 BDIR=oval_rt
   OUT=stockcars_oval_trial2 bash build.sh): the look, and is the skid enough? Road width: agreed, 88 px.
 - Known: about 6.5 pictures a second on this tape (half the usual) - to be looked into next.
