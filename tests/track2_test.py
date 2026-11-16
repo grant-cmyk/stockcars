@@ -73,7 +73,7 @@ def heading(x0, y0, x1, y1): return round(math.atan2(x1 - x0, -(y1 - y0)) / (2 *
 assert (np.array([[c == '#' for c in r] for r in MM], dtype=np.uint8) == MM_ROWS).all()     # (minimap_diff is drive_test's now: the map in the window's bottom left corner)
 
 # ---------------------------------------------------------------- the data the tape was built from
-ok(MAPW == 72 and MAPH == {'2': 64, '3': 84}.get(TRACK), 'the map is the size of this track\'s design: %d x %d tiles (mini-map at %d/256)' % (MAPW, MAPH, MSC))
+ok(MAPW == 72 and MAPH == {'2': 64, '3': 84, '6': 55}.get(TRACK), 'the map is the size of this track\'s design: %d x %d tiles (mini-map at %d/256)' % (MAPW, MAPH, MSC))
 ok(46 < NWP <= 61 and (LAPS + 1) * NWP - 1 < 246, 'its %d waypoints fit the game\'s one-byte progress over %d laps (%d at most, under the 246 kept for finished cars)' % (NWP, LAPS, (LAPS + 1) * NWP - 1))
 gaps = [math.dist(WPS[i], WPS[(i + 1) % NWP]) for i in range(NWP)]
 lap_px = sum(gaps)
@@ -90,7 +90,7 @@ print('grid:', [(c['x'], c['y'], c['wp']) for c in cs])
 ok(all(c['vx'] == 0 and c['vy'] == 0 and c['ang'] == 16 for c in cs), 'five cars wait on the grid, facing right')
 ok(all(road_px(c['x'] + i, c['y'] + j) for c in cs for i in (0, 15) for j in (0, 15)), 'every car is wholly on the road')
 ok(all(not OMAP[(c['y'] + j) // 8][(c['x'] + i) // 8] for c in cs for i in (0, 15) for j in (0, 15)), 'no car starts on a cereal O')
-LINE_X = 288
+LINE_X = 336 if TRACK == '6' else 288
 ok(all(c['x'] + 16 <= LINE_X for c in cs) and all(abs(c['y'] + 8 - SY) < 36 for c in cs) and cs[0]['x'] == max(c['x'] for c in cs),
    'they are on the start straight (y %d) behind the line (x %d), you on pole' % (SY, LINE_X))
 ok(len({(c['x'], c['y']) for c in cs}) == N and all(abs(a['x'] - b['x']) >= 16 or abs(a['y'] - b['y']) >= 16 for i, a in enumerate(cs) for b in cs[i + 1:]), 'no two cars share a place')

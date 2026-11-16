@@ -32,3 +32,19 @@
 - VERIFIED: bash build.sh makes build/racer.tap byte for byte the same as Breakfast Run's (d2f8edf);
   tests/drive_test.py, lapcount_test.py, finish_test.py, damage_test.py all RESULT: PASS. The other suites not run.
 - Version: 0.1.1 (patch: build fix only, the game unchanged).
+
+## 16 Nov 2026 21:48 SAST - the oval, trial 1 (cloud session, Claude)
+- Grant: "the track should be a little wider. And these cars will skid a lot"; ideas for weapons: "you can spit
+  out oil behind you. You can shoot the car in front. Options".
+- The oval is track 6 (tools/make_track_designs.py, track6_verts): two half-circle bends of radius 146, two
+  straights of 132 px, map 72 x 55 tiles, start line at x 336. Road 88 px wide on this track (72 elsewhere).
+- SKID=1 (build switch, src/grip.asm): your truck has about 60% of Breakfast Run's grip. A first guess.
+- Trial tape: build/stockcars_oval_trial1.tap  (TRACK=6 SKID=1 bash build.sh). Picture: docs/design/trials/oval_trial1.png.
+  It still LOOKS like Breakfast Run (tablecloth, cereal O's, mug, logo): only the track shape, width and grip changed.
+- VERIFIED: TRACK=6 QUICK=1 python3 tests/track2_test.py - the script laps it in about 14.4 s, on the road 100%,
+  three laps counted, podium comes up. Track 1's tape is still byte for byte Breakfast Run's.
+- NOT VERIFIED: how the skid feels (not driven by a person); the computer cars' grip is unchanged.
+- Two checks in that test FAIL and have not been looked into: "waypoints fit the one-byte progress" and "the
+  cereal O's stand along the road's edges" (the test was written for a 72 px road; the O's are to go anyway).
+- A lap is only about 14 seconds: races will need more laps, or a bigger oval (map height is free, width is not).
+- Version: 0.2.0 (minor: a new track and a new build switch).

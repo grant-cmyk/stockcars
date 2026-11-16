@@ -29,6 +29,8 @@ printf 'OPT_FLIP equ %s                 ; 1: draw_car and the title car read suc
 # TILE1=1: the eight unrolled tile routines as one, patched once a picture (src/gen_tiles1.asm): about 1 KB of program
 printf 'OPT_TILE1 equ %s                ; 1: one tile routine (TILE1=1 bash build.sh)\n' "${TILE1:-0}" >> "$ROOT/src/options.asm"
 # PACEFIX=1: the computer cars' throttle counted in pictures, not TV frames (their pace no longer depends on the picture rate)
+# SKID=1: STOCK CARS - your truck has much less grip (src/grip.asm). A trial until Grant has driven it.
+printf 'OPT_SKID equ %s                 ; 1: stock cars - much lower grip (SKID=1 bash build.sh)\n' "${SKID:-0}" >> "$ROOT/src/options.asm"
 printf 'OPT_PACEFIX equ %s              ; 1: pace_gate counts pictures (PACEFIX=1 bash build.sh)\n' "${PACEFIX:-0}" >> "$ROOT/src/options.asm"
 # ROADW=1: A TRIAL - the road on white paper, by colour square (src/roadwhite.asm; Grant, 16 Nov 2026: "Try E as a trial tape").
 # ROADW=2: that, and no dots on the road's squares. It needs room: build it with TILE1=1 FLIP=1 TOWER=1 (PROJECT-LOG, 16 Nov 2026).

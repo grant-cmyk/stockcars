@@ -1,6 +1,6 @@
 # CONTINUE - Stock Cars (working title)
 
-Stamped: 16 Nov 2026 21:37 SAST. Machine: Claude cloud container (no local machine). Commit: the one that adds this file (see git log -1).
+Stamped: 16 Nov 2026 21:48 SAST. Machine: Claude cloud container (no local machine). Commit: the one that adds this file (see git log -1).
 Repository: GitHub grant-cmyk/stockcars (private), branch main. Identity: Personal. Classification: Internal.
 
 ## What this is
@@ -17,11 +17,15 @@ Weapon trucks racing on a scrolling oval, ZX Spectrum 48K, built on a copy of th
 1. DONE: the baseline builds (same bytes as Breakfast Run) and four suites pass. In a new cloud session:
    clone grant-cmyk/claude-plugins-personal and grant-cmyk/zx-emulator beside this repository, run
    sh build-linux.sh in zx-emulator, then bash build.sh here.
-2. Replace the track with the oval (tools/make_world.py makes the world, waypoints and mini-map).
+2. STARTED: the oval is track 6, 88 px road, loose grip behind SKID=1. Trial tape
+   build/stockcars_oval_trial1.tap (TRACK=6 SKID=1 bash build.sh) - waiting for Grant to drive it. Still to do:
+   the black road / green grass look, remove the cereal O's and breakfast things, look into the two failing checks.
 3. Add the hammer and the spin behind a build switch; make a trial tape for Grant to drive.
 4. Then: the other weapons, defence, the build-your-truck screen (src/choose.asm is the starting point).
 Read docs/reference/OPTIMISATION-PLAN.md before adding anything: Breakfast Run ended with about 23 bytes free.
 
 ## Waiting on Grant
+- Drive build/stockcars_oval_trial1.tap: is the road wide enough, is the skid enough?
+- Weapon ideas he raised, to be offered as options on the build screen: oil dropped behind, a shot at the car in front.
 - What happens to a truck with no armour left; how you win; one or two players; the name.
 - Notion Workstreams row: not created (this session is on the TTRO account; the row belongs under Personal).

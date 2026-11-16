@@ -15,6 +15,14 @@
 ; worked out again from it. Multiplying uses quarter squares (sqtab):
 ; a * b = sq(a + b) - sq(|a - b|), sq(n) = n * n / 4.
 ; =====================================================================
+    if OPT_SKID
+; STOCK CARS (SKID=1 bash build.sh; Grant, 16 Nov 2026: "these cars will skid a lot"): a trial - about 60% of the
+; grip below, so the truck slides sooner and for longer. Not yet driven by Grant.
+G_GRIP   equ 10
+G_SLIDE  equ 5
+G_Q      equ 5
+G_QSLIDE equ 3
+    else
 G_GRIP   equ 16                 ; 0.0625 px a frame of sideways speed (8.8): GRIP level 1. It was 22;
                                 ; Grant, 14 Nov 2026: "have the car skid/slide more. The idea is that the
                                 ; player will need to 'buy' improved grip to reduce the skidding"
@@ -22,6 +30,7 @@ G_SLIDE  equ 8                  ; ... while sliding (it was 14: Grant, 14 Nov 20
                                 ; skid enough around corners ... at full speed there needs to be more")
 G_Q      equ 8                  ; ... while you steer with Q held (it was 14)
 G_QSLIDE equ 5                  ; ... both (it was 9)
+    endif
 G_PUSH   equ 64                 ; 0.25 a frame (with drag 1/8: top speed 1.75)
 G_TOP    equ 448                ; 1.75 px a frame
 

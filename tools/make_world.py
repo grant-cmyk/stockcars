@@ -26,7 +26,7 @@ if TRACK != 1:                    # a later track's design (tools/make_track_des
 W, H = 72, (64 if TRACK == 1 else _t['H'])                     # tiles (64 rows: the bigger track, 10 Nov 2026) (a border wide enough that the
                                   # camera never has to stop at the world's edge)
 PW, PH = W * 8, H * 8             # pixels
-ROAD = 72                         # road width in pixels (48, 52, 56, 64, then 72 for the big cars - Grant, 10 Nov 2026)
+ROAD = 88 if os.environ.get('TRACK') == '6' else 72   # (the oval: wider - Grant, 16 Nov 2026)                         # road width in pixels (48, 52, 56, 64, then 72 for the big cars - Grant, 10 Nov 2026)
 
 # THE CORNER ARROWS' LOOK-AHEAD (the rest is further down: "THE CORNER ARROWS"). Change these to make the
 # arrows show earlier, later, more or less often; the generator prints how many waypoints of the lap show one.
@@ -74,7 +74,7 @@ SY = 352 + DY                     # the bottom straight's middle: the start line
 if TRACK != 1:                    # a later track: the centre line of its design (the start line is at x = 288 and
                                   # the grid behind it on a bottom straight, as on track 1)
     assert _t['W'] == W, 'the game\'s road-surface and O maps are 72 tiles wide'
-    assert _t['lx'] == 256 + OFF or TRACK == 5
+    assert _t['lx'] == 256 + OFF or TRACK in (5, 6)
     PATH = list(_t['path']); SY = _t['sy']
 LX = 256 + OFF if TRACK == 1 else _t['lx']      # the start line's x (track 5: 384 - its start straight begins further right)
 BRIDGE = _t.get('bridge') if TRACK != 1 else None   # TRACK 5 only: the crossover (see the BRIDGE blocks below; nothing else changes for tracks 1-3)
@@ -256,8 +256,9 @@ if os.environ.get('T2_THINGS'): T2_THINGS = [(n, int(x), int(y)) for n, x, y in 
 T3_THINGS = [('egg', 3, 25), ('egg', 67, 2), ('egg', 11, 80), ('toast', 21, 38), ('toast', 54, 62)]
 if TRACK == 2: wanted = T2_THINGS[:KEEP_OLD]
 if TRACK == 3: wanted = (T2_THINGS if os.environ.get('T2_THINGS') else T3_THINGS)[:KEEP_OLD]
+if TRACK == 6: wanted = []        # the oval: nothing on the track yet
 if TRACK == 5: wanted = []        # BRIDGE: no breakfast things on this track - their memory is the bridge's
-assert TRACK in (1, 2, 3, 5), 'tracks 1, 2, 3 and 5 only (4 does not fit in memory)'
+assert TRACK in (1, 2, 3, 5, 6), 'tracks 1, 2, 3, 5 and 6 only (4 does not fit in memory)'
 # Each thing is masked so it sits on the tablecloth, but a tile only needs its
 # mask (slower to draw) where the mask covers a dark, dithered check. So try
 # positions near the one wanted and take the one with fewest such tiles.

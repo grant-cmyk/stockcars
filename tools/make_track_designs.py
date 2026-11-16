@@ -32,7 +32,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUTDIR = os.path.join(HERE, '..', 'docs', 'design', 'tracks')
-ROAD = 72                          # road width in pixels (make_world.py)
+ROAD = 88 if os.environ.get('TRACK') == '6' else 72   # (the oval: wider - Grant, 16 Nov 2026)                          # road width in pixels (make_world.py)
 WP_STEP = 32                       # a waypoint every ~32 px of centre line (make_world.py)
 WIN_W, WIN_H = 192, 152            # the play window, pixels
 CLEAR_TILES = 3                    # cloth wanted between two sections of road
@@ -116,6 +116,11 @@ def track5_verts():
     """A FRIDGE TOO FAR - a figure of eight: the road crosses over itself once, on a bridge. 72 x 74."""
     yb = 74 * 8 - 72; yt = M; y2 = yt + 108; yc = BR_Y        # start straight; top lane; second lane; the lower road
     return [(BR_X, yb, 55), (XR, yb, 55), (XR, yc, 55), (XL, yc, 55), (XL, yt, 55), (XR, yt, 54), (XR, y2, 54), (BR_X, y2, 55)]
+def track6_verts():
+    """STOCK CARS: THE OVAL - two half circles and two short straights (Grant, 16 Nov 2026: "The track is oval
+    shaped, with a short straight"). 72 x 55."""
+    yb = 55 * 8 - 72; yt = M + 8; r = (yb - yt) / 2           # 146: the bends are half circles, the straights 132 px
+    return [(XL + 8, yb, r), (XR - 8, yb, r), (XR - 8, yt, r), (XL + 8, yt, r)]   # 8 px in: the road is 88 wide, not 72
 BR_X, BR_Y = 188, 336              # the crossing: the upper road runs north-south at x = BR_X, the lower east-west at y = BR_Y
 FACE = 16                          # px: the side face of the one-sided 'oblique' alternative (kept as one extra panel)
 SIDE = 8                           # px: the concrete wall along each side of the bridge, at its thickest (beside the deck)
@@ -139,6 +144,8 @@ TRACKS = [
          kind='the pastry swirl: spiral in on big sweeping curves, hairpin in the middle, spiral out'),
     dict(n=5, name='A FRIDGE TOO FAR', W=72, H=74, sy=74 * 8 - 72, lx=384, verts=track5_verts(), bridge=BRIDGE,
          kind='the crossover: a figure of eight - under the bridge first, then round, up a ramp and over it'),
+    dict(n=6, name='THE OVAL', W=72, H=55, sy=55 * 8 - 72, lx=336, verts=track6_verts(),
+         kind='stock cars: an oval - two half-circle bends, two short straights'),
 ]
 for t in TRACKS:
     t['path'] = track1_path() if t['verts'] is None else rounded(t['verts'])
