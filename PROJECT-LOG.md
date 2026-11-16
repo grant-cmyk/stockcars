@@ -92,3 +92,21 @@
   Biggest parts on the oval: screen copy 63,500, tiles 60,400 (15,000 on the plain engine), cars 22,700; the
   listed parts do not add up to the total - where the rest goes has not been found yet.
 - NOT DONE: nothing in the game uses the 24 x 24 art yet.
+
+## 16 Nov 2026 22:59 SAST - the 24 x 24 trucks are in the game, trial 3 (cloud session, Claude)
+- Grant on Claude's draft trucks: "happy with trucks".
+- TRUCKS=1 (tools/make_data.py, with the big cars: bash build.sh big): the truck (BODY + TRUCK_WEAPON, default
+  HAMMER, from tools/truck_art.txt) goes through the big cars' pipeline - a 27 x 27 grid, a 24-wide frame - and all
+  five trucks' table entries point at ONE set of frames. MEASURED: 1,620 bytes of pictures (the small cars: 4,864).
+- src/racetrack.asm: the row of 24 stores is padded onto one page wherever the program puts it (the bigger build
+  moved it across a page and the build stopped).
+- Trial tape: build/stockcars_oval_trial3.tap
+  (TRUCKS=1 RACETRACK=1 TRACK=6 SKID=1 BDIR=oval_rt_trucks OUT=stockcars_oval_trial3 bash build.sh big).
+  Pictures from the tape: docs/design/trials/oval_trial3.gif, oval_trial3_grid.png, oval_trial3_bend.png.
+- VERIFIED (tests/rt_laps.py, 60 s by autopilot): all five trucks lap, about 15.5 s a lap; 365 pictures = 6.1 a second.
+- KNOWN FAULTS: (1) the slanted headings are turned by the computer and the wheels come out as solid lumps - they
+  need tidying by hand (a 27 x 27 file like big_car_art_27.txt, or simpler wheels); a pixel or two is cut off the
+  widest corners at 45 degrees by the 24-wide frame. (2) The race order on the right has lost its car pictures (it
+  draws them from the frames, and 24 x 24 does not fit its 16 x 16 boxes). (3) Every truck has the hammer; nothing
+  works as a weapon yet. (4) Trucks that touch share colour squares (one takes the other's colour).
+- Version: 0.4.0 (minor: the trucks).

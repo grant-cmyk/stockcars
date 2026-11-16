@@ -262,6 +262,9 @@ rcl_fill:
         ld (rcl_j+1),a
         ex af,af'
 rcl_j:  jp rcl_blk_end
+        if (($ AND 255) + 2 * WIN_W) > 255      ; (STOCK CARS: keep the row below on one page wherever the program
+        defs 256 - ($ AND 255)                  ; has moved it to - never run: the JP above always jumps past it)
+        endif
 rcl_blk:
         rept WIN_W
         ld (hl),a

@@ -236,6 +236,26 @@ def stamp(g, k, h):
                 g[y0 + j][x0 + i] = PAPER if 0 <= j < 5 and 0 <= i < 3 and DIGIT[d][j][i] == 'o' else INK
     return g
 BIG0, BIGT = big_turned()
+# ---- STOCK CARS: the trucks (TRUCKS=1 in the environment, with the big cars: TRUCKS=1 bash build.sh big). ONE drawing
+# for every truck (Grant, 16 Nov 2026: 24 x 24, "yes" to one shared body with the weapon drawn over it; "happy with
+# trucks" on Claude's drafts) from tools/truck_art.txt: the BODY with the weapon TRUCK_WEAPON (default HAMMER) over it,
+# on the 27 x 27 grid, turned here for the angled headings (not yet tidied by hand). Every truck's table entries point
+# at the first truck's frames, so the pictures are kept once. The colour is the square's, not the drawing's.
+TRUCKS = os.environ.get('TRUCKS') == '1'
+def truck_grid(weapon):
+    import re
+    t = open(os.path.join(HERE, 'truck_art.txt')).read()
+    art = {m.group(1): m.group(2).split() for m in re.finditer(r'== (\w+) ==\n((?:[Xo.]+\n)+)', t)}
+    g = [[NONE] * GN for _ in range(GN)]
+    for name in ('BODY', weapon):
+        for y, r in enumerate(art[name]):
+            for x, c in enumerate(r):
+                if c != '.': g[y + 2][x + 2] = HC[c]      # the drawing's middle (11.5, 11.5) on the grid's (13.5, 13.5)
+    return g
+if TRUCKS:
+    _t0 = truck_grid(os.environ.get('TRUCK_WEAPON', 'HAMMER'))
+    BIG0 = {k: _t0 for k in range(len(NAMES))}
+    BIGT = {k: {'22.5': bturn(_t0, BIG_ANG[1]), '45': bsym45(bturn(_t0, 45))} for k in range(len(NAMES))}
 def big_frames(k):
     n, nne, ne = BIG0[k], BIGT[k]['22.5'], BIGT[k]['45']
     f = [n, nne, ne, bmdiag(nne)]
@@ -286,6 +306,8 @@ def big_layout():
         fr = [big_bytes(g) for g in big_all[k]]
         for h, g in enumerate(big_all[k]):
             first, rows = fr[h]; n = ROWB * len(rows)
+            if TRUCKS and 0 < k < 5:                              # the trucks share the first truck's frames
+                tab.append((k, h) + tuple(v for v in tab if v[0] == 0 and v[1] == h)[0][2:]); continue
             src = FLIP_OF.get(h) if FLIP else None
             if src is not None and fr[src][1][::-1] == rows:      # FLIP=1: this heading is heading `src` upside down, pixel for pixel:
                 tab.append((k, h, first, len(rows) | 0x80, 'bf_%d_%d+%d' % (k, src, ROWB * (len(rows) - 1)))); continue   # not kept - drawn from src's last row up
