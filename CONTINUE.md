@@ -1,6 +1,6 @@
 # CONTINUE - Stock Cars (working title)
 
-Stamped: 17 Nov 2026 06:17 SAST. Machine: Claude cloud container (no local machine). Commit: the one that adds this file (see git log -1).
+Stamped: 17 Nov 2026 06:36 SAST. Machine: Claude cloud container (no local machine). Commit: the one that adds this file (see git log -1).
 Repository: GitHub grant-cmyk/stockcars (private), branch main. Identity: Personal. Classification: Internal.
 
 ## What this is
@@ -24,16 +24,14 @@ Weapon trucks racing on a scrolling oval, ZX Spectrum 48K, built on a copy of th
 4. Then: the other weapons, defence, the build-your-truck screen (src/choose.asm is the starting point).
 Read docs/reference/OPTIMISATION-PLAN.md before adding anything: Breakfast Run ended with about 23 bytes free.
 
-## Latest tapes
-- build/stockcars_oval_trial6_noline.tap: the oval, black road, NO limit line, 20 x 20 hammer trucks, loose grip, with
-  Breakfast Run's speed work: 12.25 pictures a second alone, 9.1 in the pack.
-  (TRUCKS=1 RACETRACK=1 TRACK=6 SKID=1 RT_NOLINE=1 BDIR=oval_rt_b OUT=stockcars_oval_trial6_noline bash build.sh big)
-- build/stockcars_oval_trial5.tap: the same with the white dashed line, before the speed work (about 6 a second).
-- The dashed line does not build with the speed work on the oval (too many edge pictures: 356, room for 256).
-Known faults and what is next: the last entries of PROJECT-LOG.md.
+## Latest tape
+build/stockcars_oval_trial7.tap: the oval, black road, grass edge with NO limit line (decided), 20 x 20 hammer trucks,
+loose grip, Breakfast Run's speed work, the title's trucks fixed.
+(TRUCKS=1 RACETRACK=1 TRACK=6 SKID=1 RT_NOLINE=1 BDIR=oval_rt_b OUT=stockcars_oval_trial7 bash build.sh big)
+Known faults and what is next: the last entries of PROJECT-LOG.md. Next piece of work: the hammer and the spin.
 
 ## Waiting on Grant
-- Drive trial 6 no-line (faster) against trial 5 (white dashes, slow): which look; truck size. (Skid: "good" on trial 3 - keep SKID=1.)
+- Drive trial 7: truck size, any more drawing faults. (Skid: "good" on trial 3 - keep SKID=1.)
 - Truck art: 24 x 24, ONE shared body + weapon drawings (agreed). Grant to redraw Claude's drafts in the editor
   (https://claude.ai/artifact/CjLeN5LA5Ky7xm1JuS72nt) and paste the text back -> tools/truck_art.txt.
 - Drive build/stockcars_oval_trial2.tap (black road, green grass; RACETRACK=1 TRACK=6 SKID=1 BDIR=oval_rt

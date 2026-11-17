@@ -23,7 +23,11 @@ a_zr:                           ; B rows from row A: the box's 5 bytes are the t
         jr nc,ar_next
         dec l
         dec c
+        if CAR_U = 15
         ld b,5
+        else
+        ld b,6
+        endif
 ar_b:
         call a_bgw
         inc l
@@ -132,8 +136,12 @@ ad_row:
         call a_radr
         exx
         jr c,ad_vis
-        ld a,e                  ; a row off the cloth: past its 4 bytes (a small car's row: two pairs)
+        ld a,e                  ; a row off the cloth: past its 4 bytes (a small car's row: two pairs; a big car's: three, 6)
+        if CAR_U = 15
         add a,4
+        else
+        add a,6
+        endif
         ld e,a
         jr nc,ad_o
         inc d
@@ -148,7 +156,11 @@ ad_vis:
         call a_bgw
         inc l
         inc c
+        if CAR_U = 15
         ld b,3
+        else
+        ld b,4                  ; (STOCK CARS: a big car's row has its three pairs, then the carry-over byte)
+        endif
 ad_b:
         exx
         ld a,(de)
@@ -200,7 +212,11 @@ ad_next:
         jr z,ad_nf
         exx
         ld a,e                  ; (upside down: back to the row above the one just drawn)
+        if CAR_U = 15
         sub 2*4
+        else
+        sub 2*6
+        endif
         ld e,a
         jr nc,ad_nf1
         dec d

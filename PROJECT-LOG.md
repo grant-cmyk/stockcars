@@ -167,3 +167,18 @@
 - NOT VERIFIED: the 16-heading and grass-edge photographs were not retaken on trial 6; tests/racetrack_test.py and
   rt_fixed_test.py not run on the oval; whether GRIP1 changes the feel of the skid.
 - Version: 0.5.0 (minor: the faster race track).
+
+## 17 Nov 2026 06:36 SAST - no white line; the title screen's trucks fixed, trial 7 (cloud session, Claude)
+- DECIDED by Grant: "no white line required". The road's edge is the grass (RT_NOLINE=1) - the fast build.
+- Grant sent the title screen: the five trucks that drive round its edge were drawn as broken blocks. CAUSE: the title's
+  own car routine (src/title2.asm, ad_draw) read the small cars' rows - two pairs of bytes, a 3-byte box. For the big
+  cars it now reads three pairs and a carry-over byte (a 4-byte picture), skips 6 bytes for a row off the cloth, steps
+  back 2*6 for a picture read upside down, and clears a 6-byte box.
+- VERIFIED: four photographs of the title in the emulator show whole trucks all round the edge
+  (docs/design/trials/oval_trial7_title.png). tests/rt_laps.py on trial 7: all five lap.
+- Trial tape: build/stockcars_oval_trial7.tap
+  (TRUCKS=1 RACETRACK=1 TRACK=6 SKID=1 RT_NOLINE=1 BDIR=oval_rt_b OUT=stockcars_oval_trial7 bash build.sh big).
+  The earlier trial tapes are removed from build/ (each had a fault since fixed; they are in the history).
+- STILL TO CHECK for the same small-car habit: the race order's pictures (hud.asm tower_b - blank today), the choose
+  screen, the podium.
+- Version: 0.5.1 (patch).
