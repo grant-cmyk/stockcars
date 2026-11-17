@@ -143,3 +143,27 @@
   Pictures: docs/design/trials/oval_trial5.gif (a full lap), oval_trial5_far_bend.png. Trial 4's tape removed (broken).
 - STILL WRONG: as trial 4's list (panel pictures, shared colour squares when trucks overlap, hammer only, no weapons).
 - Version: 0.4.2 (patch: a drawing fault fixed).
+
+## 17 Nov 2026 06:17 SAST - Breakfast Run's speed work brought across, trial 6 (cloud session, Claude)
+- Grant: "are you able to see the breakfast run progress - they have managed to speed things up there".
+- Brought across grant-cmyk/breakfastrun branch claude/breakfast-run-layout-ik0vpe, commits ddf2236..e021d38 (the race
+  track's speed pass: only the squares that show anything are drawn, straight to the screen; the per-square code moved
+  out of the slow memory into src/racetrack_hot.asm; the map, plate and mug sent only when changed; switches GRIP1,
+  RT_ROWS, RT_NOLINE, RT_PIN, RT_DASH). src/racetrack.asm taken whole from there; Stock Cars' big-truck fixes put back
+  on top: the big version of rt_car_sq (now with rq_tl), rt_bm moved after rt_b for the big cars (15 bytes),
+  rq_ring's ring sized by RQ_W/RQ_H (6 x 7 squares for the trucks), the rim patch's dc_ink4/5.
+- MEASURED on the oval with the trucks (tests/stage_profile.py, 8 s; pictures a second, mid-lap alone / in the pack):
+    trial 5 (white dashes, before the speed work)         about 7 / 6
+    trial 6 NO LINE (RT_NOLINE=1)                          12.25 / 9.1
+    trial 6 NO LINE, your truck once a picture (GRIP1=1)   12.5  / 9.0
+  A 60 s race by autopilot (tests/rt_laps.py): 518 pictures = 8.6 a second (trial 5: 366 = 6.1); all five lap.
+- DOES NOT BUILD on the oval: the white dashed line and the thin green line - "too many pictures for one map: 356"
+  (288 for the green line). The new packed map holds 256 different edge pictures and the oval's long bends, 88 px
+  wide, need more. Not yet looked into (fewer dashes on bends, or mirrored pictures, might do it).
+- Tapes: build/stockcars_oval_trial6_noline.tap
+  (TRUCKS=1 RACETRACK=1 TRACK=6 SKID=1 RT_NOLINE=1 BDIR=oval_rt_b OUT=stockcars_oval_trial6_noline bash build.sh big)
+  and build/stockcars_oval_trial6_noline_grip1.tap (the same with GRIP1=1, BDIR=oval_rt_c).
+  Pictures: docs/design/trials/oval_trial6_noline.gif, oval_trial6_noline_30.png, oval_trial6_noline_95.png.
+- NOT VERIFIED: the 16-heading and grass-edge photographs were not retaken on trial 6; tests/racetrack_test.py and
+  rt_fixed_test.py not run on the oval; whether GRIP1 changes the feel of the skid.
+- Version: 0.5.0 (minor: the faster race track).

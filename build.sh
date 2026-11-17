@@ -13,7 +13,21 @@ CARSOPT="${1:-small}"
 # give, so it turns them on; it builds in its own folder (build/racetrack); tools/make_world.py reads RACETRACK too.
 if [ "${RACETRACK:-0}" = "1" ]; then
   export RACETRACK TILE1=1 FLIP=1 TOWER=1 LOOP=1
-  BDIR="${BDIR:-racetrack}"; OUT="${OUT:-racer_racetrack}"
+  # RT_NOLINE=1 with it: no limit line (quicker: a concession for Grant to judge) -> build/racer_racetrack_noline.tap
+  RTN=""; [ "${RT_NOLINE:-0}" = "1" ] && RTN="${RTN}_noline"
+  # RT_DASH=sparse with it: the limit line's dashes 8 on, 24 off (quicker too) -> build/racer_racetrack_sparse.tap
+  [ "${RT_DASH:-}" = "sparse" ] && RTN="${RTN}_sparse"
+  # RT_PIN=solid or dash with RT_NOLINE=1: the limit as a thin green line just inside the grass's edge -> ..._noline_pin.tap, _pindash.tap
+  [ "${RT_PIN:-}" = "solid" ] && RTN="${RTN}_pin"
+  [ "${RT_PIN:-}" = "dash" ] && RTN="${RTN}_pindash"
+  # RT_ROWS=16 with it (15 to 18): A SMALLER PLAY WINDOW - only the window's first 16 rows of squares scroll; the rows under
+  # them are a black band that holds the mini-map, the crew chief's bubble, the spoons and the mug -> ..._rows16.tap
+  [ "${RT_ROWS:-19}" != "19" ] && RTN="${RTN}_rows${RT_ROWS}"
+  # GRIP1=1 with it: your car's grip sums once a picture (a trial switch, below) -> ..._grip1.tap
+  [ "${GRIP1:-0}" = "1" ] && RTN="${RTN}_grip1"
+  BDIR="${BDIR:-racetrack$RTN}"; OUT="${OUT:-racer_racetrack$RTN}"
+elif [ "${GRIP1:-0}" = "1" ]; then
+  BDIR="${BDIR:-grip1_t${TRACK:-1}}"; OUT="${OUT:-racer_grip1}"      # (GRIP1=1 without RACETRACK: today's game with the switch -> build/racer_grip1.tap. It needs a few bytes: TILE1=1 FLIP=1 TOWER=1 GRIP1=1 bash build.sh)
 fi
 CARS="$CARSOPT" python3 "$ROOT/tools/make_data.py" | grep -i "cars:"
 U=15; [ "$CARSOPT" = "big" ] && U=12
@@ -56,6 +70,10 @@ printf 'OPT_RT equ %s                   ; 1: the race track trial - black road, 
 # CHOOSE=1: the choose screen between the title and the race - track, driver, car, extra (src/choose.asm). Only with the
 # several-tracks build: use tools/build_choose.sh -> build/racer_choose.tap
 printf 'OPT_CHOOSE equ %s               ; 1: the choose screen (tools/build_choose.sh: not for build.sh alone)\n' "${CHOOSE:-0}" >> "$ROOT/src/options.asm"
+# GRIP1=1: A TRIAL SWITCH - your car is moved once a picture like the computer cars, its grip sums once a picture (it still
+# steers every TV frame). Quicker, but it changes the handling a little: off unless asked for (PROJECT-LOG, 17 Nov 2026).
+printf 'OPT_GRIP1 equ %s                ; 1: your car moved, and its grip worked out, once a picture (GRIP1=1 bash build.sh)\n' "${GRIP1:-0}" >> "$ROOT/src/options.asm"
+printf 'OPT_RTROWS equ %s              ; the race track trial: how many of the window'"'"'s 19 rows of squares scroll (RT_ROWS=16 RACETRACK=1 bash build.sh)\n' "${RT_ROWS:-19}" >> "$ROOT/src/options.asm"
 # The tape maker: ZX_BUILD if set; else the retro plugin as synced into Claude; else a checkout of
 # grant-cmyk/claude-plugins-personal beside this repository (cloud sessions on another account have no synced plugin).
 B=$(ls /root/.claude/plugins/synced/*/retro/skills/zxspectrum/scripts/build.sh "$ROOT"/../claude-plugins-personal/plugins/retro/skills/zxspectrum/scripts/build.sh 2>/dev/null | head -1 || true)
